@@ -14,35 +14,22 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.mock.MockTracer;
-import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.util.GlobalTracer;
+import io.opentracing.util.GlobalTracerTestUtil;
 
-import java.lang.reflect.Field;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- *  @author Pavol Loffay
+ *  @author Gilles Robert
  */
 @Configuration
 @EnableAutoConfiguration
 public class MockTracingConfiguration {
 
-  private static void resetGlobalTracer() {
-    try {
-      Field globalTracerField = GlobalTracer.class.getDeclaredField("tracer");
-      globalTracerField.setAccessible(true);
-      globalTracerField.set(null, NoopTracerFactory.create());
-      globalTracerField.setAccessible(false);
-    } catch (Exception e) {
-      throw new RuntimeException("Error reflecting globalTracer: " + e.getMessage(), e);
-    }
-  }
-
   @Bean
   public MockTracer mockTracer() {
-    resetGlobalTracer();
+    GlobalTracerTestUtil.resetGlobalTracer();
     return new MockTracer();
   }
 }

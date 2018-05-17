@@ -17,20 +17,17 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-import com.rabbitmq.client.LongString;
-import com.rabbitmq.client.SaslMechanism;
-import com.rabbitmq.client.impl.LongStringHelper;
+import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMq;
+import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMqConfig;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
-import io.opentracing.noop.NoopTracerFactory;
-import io.opentracing.util.GlobalTracer;
+import io.opentracing.util.GlobalTracerTestUtil;
 
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,52 +45,54 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.test.context.TestContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.AbstractTestExecutionListener;
 import org.springframework.util.Assert;
 
 /**
- *  @author Gilles Robert
+ * @author Gilles Robert
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class,
-    RabbitMqSendAndReceiveTracingItTest.RabbitListenerTestConfig.class}
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class}
 )
 @RunWith(SpringJUnit4ClassRunner.class)
-public class RabbitMqSendAndReceiveTracingItTest {
+public class RabbitMqSendAndReceiveTracingItTest extends AbstractTestExecutionListener {
 
-  private final EmbeddedQpidBroker broker = new EmbeddedQpidBroker();
+  private static final int PORT = 5672;
   @Autowired private RabbitTemplate rabbitTemplate;
   @Autowired private MockTracer tracer;
-  @Autowired private RabbitConnectionFactoryBean rabbitConnectionFactoryBean;
-  @Autowired private Queue queue;
+  @Autowired private SimpleMessageListenerContainer simpleMessageListenerContainer;
+  @Autowired private CachingConnectionFactory cachingConnectionFactory;
+  @Autowired private RabbitAdmin rabbitAdmin;
 
-  @Before
-  public void setup() throws Exception {
-    tracer.reset();
-    broker.start();
+  private EmbeddedRabbitMq rabbitMq;
 
-    final CachingConnectionFactory cachingConnectionFactory =
-        new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
-
-    final TopicExchange exchange = new TopicExchange("myExchange", true, false);
-
-    final RabbitAdmin admin = new RabbitAdmin(cachingConnectionFactory);
-    admin.declareQueue(queue);
-    admin.declareExchange(exchange);
-    admin.declareBinding(BindingBuilder.bind(queue).to(exchange).with("#"));
-
-    cachingConnectionFactory.destroy();
+  @Override
+  public void beforeTestClass(TestContext testContext) {
+    EmbeddedRabbitMqConfig config =
+        new EmbeddedRabbitMqConfig.Builder()
+            .rabbitMqServerInitializationTimeoutInMillis(300000)
+            .port(PORT)
+            .build();
+    rabbitMq = new EmbeddedRabbitMq(config);
+    rabbitMq.start();
   }
 
-  @After
-  public void deleteExchange() throws Exception {
-    final CachingConnectionFactory cachingConnectionFactory =
-        new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
-    final RabbitAdmin admin = new RabbitAdmin(cachingConnectionFactory);
-    admin.deleteExchange("myExchange");
+  @Override
+  public void afterTestClass(TestContext testContext) {
+    rabbitAdmin.deleteExchange("myExchange");
     cachingConnectionFactory.destroy();
-    broker.stop();
+    simpleMessageListenerContainer.destroy();
+    rabbitMq.stop();
+  }
+
+  @Before
+  public void setup() {
+    tracer.reset();
   }
 
   @Test
@@ -144,6 +143,60 @@ public class RabbitMqSendAndReceiveTracingItTest {
     assertSameTraceId(spans);
   }
 
+  @Test
+  public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {
+    Span span = tracer.buildSpan("parentOperation").start();
+    tracer.scopeManager().activate(span, false);
+
+    final String message = "hello world message!";
+    rabbitTemplate.convertAndSend("myExchange", "#", message);
+
+    await()
+        .until(
+            () -> {
+              List<MockSpan> mockSpans = tracer.finishedSpans();
+              return (mockSpans.size() == 2);
+            });
+
+    MockSpan.MockContext context = (MockSpan.MockContext) tracer.activeSpan().context();
+    long parentSpanId = context.spanId();
+    List<MockSpan> spans = tracer.finishedSpans();
+    assertEquals(2, spans.size());
+    MockSpan mockSentSpan = spans.get(0);
+    assertThat(mockSentSpan.parentId(), Matchers.equalTo(parentSpanId));
+    assertThat(
+        mockSentSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
+    assertThat(mockSentSpan.tags(), Matchers.notNullValue());
+    assertThat(mockSentSpan.tags().size(), Matchers.is(5));
+    assertThat(mockSentSpan.tags().get("messageid"), Matchers.notNullValue());
+    assertThat(
+        mockSentSpan.tags().get("component"),
+        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
+    assertThat(mockSentSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
+    assertThat(
+        mockSentSpan.tags().get("span.kind"),
+        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
+    assertThat(mockSentSpan.tags().get("routingkey"), Matchers.equalTo("#"));
+
+    MockSpan mockReceivedSpan = spans.get(1);
+    assertThat(
+        mockReceivedSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
+    assertThat(mockReceivedSpan.tags(), Matchers.notNullValue());
+    assertThat(mockReceivedSpan.tags().size(), Matchers.is(6));
+    assertThat(mockReceivedSpan.tags().get("messageid"), Matchers.notNullValue());
+    assertThat(
+        mockReceivedSpan.tags().get("component"),
+        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
+    assertThat(mockReceivedSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
+    assertThat(
+        mockReceivedSpan.tags().get("span.kind"),
+        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
+    assertThat(mockReceivedSpan.tags().get("routingkey"), Matchers.equalTo("#"));
+    assertThat(mockReceivedSpan.tags().get("consumerqueue"), Matchers.equalTo("myQueue"));
+    assertThat(mockReceivedSpan.generatedErrors().size(), Matchers.is(0));
+    assertSameTraceId(spans);
+  }
+
   private void assertSameTraceId(Collection<MockSpan> spans) {
     if (!spans.isEmpty()) {
       final long traceId = spans.iterator().next().context().traceId();
@@ -154,48 +207,14 @@ public class RabbitMqSendAndReceiveTracingItTest {
   }
 
   @Configuration
-  static class RabbitListenerTestConfig {
-
-    @Autowired private RabbitConnectionFactoryBean rabbitConnectionFactoryBean;
-    @Autowired private Queue queue;
-
-    @Bean
-    public SimpleMessageListenerContainer messageListenerContainer() throws Exception {
-      final CachingConnectionFactory cachingConnectionFactory =
-          new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
-      SimpleMessageListenerContainer container =
-          new SimpleMessageListenerContainer(cachingConnectionFactory);
-      container.setQueues(queue);
-      container.setMessageListener(new MessageListenerAdapter(new MessageListenerTest()));
-
-      return container;
-    }
-
-    class MessageListenerTest {
-
-      public void handleMessage(Object message) {}
-    }
-  }
-
-  @Configuration
+  @EnableAspectJAutoProxy(proxyTargetClass = true)
   static class TestConfig {
 
     @Autowired @Lazy private Tracer tracer;
 
-    private static void resetGlobalTracer() {
-      try {
-        Field globalTracerField = GlobalTracer.class.getDeclaredField("tracer");
-        globalTracerField.setAccessible(true);
-        globalTracerField.set(null, NoopTracerFactory.create());
-        globalTracerField.setAccessible(false);
-      } catch (Exception e) {
-        throw new RuntimeException("Error reflecting globalTracer: " + e.getMessage(), e);
-      }
-    }
-
     @Bean
     public MockTracer mockTracer() {
-      resetGlobalTracer();
+      GlobalTracerTestUtil.resetGlobalTracer();
       return new MockTracer();
     }
 
@@ -238,25 +257,47 @@ public class RabbitMqSendAndReceiveTracingItTest {
     @Bean
     public RabbitConnectionFactoryBean rabbitConnectionFactoryBean() throws Exception {
       RabbitConnectionFactoryBean rabbitConnectionFactoryBean = new RabbitConnectionFactoryBean();
-      rabbitConnectionFactoryBean.setUsername("admin");
-      rabbitConnectionFactoryBean.setPassword("admin");
-      rabbitConnectionFactoryBean.setPort(EmbeddedQpidBroker.BROKER_PORT);
-      rabbitConnectionFactoryBean.setSkipServerCertificateValidation(true);
-      rabbitConnectionFactoryBean.setSaslConfig(
-          strings -> new SaslMechanism() {
-            @Override
-            public String getName() {
-              return "PLAIN";
-            }
-
-            @Override
-            public LongString handleChallenge(
-                LongString longString, String username, String password) {
-                return LongStringHelper.asLongString("\u0000" + username + "\u0000" + password);
-              }
-            });
+      rabbitConnectionFactoryBean.setUsername("guest");
+      rabbitConnectionFactoryBean.setPassword("guest");
+      rabbitConnectionFactoryBean.setHost("localhost");
+      rabbitConnectionFactoryBean.setVirtualHost("/");
+      rabbitConnectionFactoryBean.setPort(PORT);
       rabbitConnectionFactoryBean.afterPropertiesSet();
       return rabbitConnectionFactoryBean;
+    }
+
+    @Bean
+    public CachingConnectionFactory cachingConnectionFactory(
+        RabbitConnectionFactoryBean rabbitConnectionFactoryBean) throws Exception {
+      return new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
+    }
+
+    @Bean
+    public RabbitAdmin rabbitAdmin(Queue queue, CachingConnectionFactory cachingConnectionFactory) {
+      final TopicExchange exchange = new TopicExchange("myExchange", true, false);
+
+      final RabbitAdmin admin = new RabbitAdmin(cachingConnectionFactory);
+      admin.declareQueue(queue);
+      admin.declareExchange(exchange);
+      admin.declareBinding(BindingBuilder.bind(queue).to(exchange).with("#"));
+
+      return admin;
+    }
+
+    @Bean
+    public SimpleMessageListenerContainer messageListenerContainer(
+        CachingConnectionFactory cachingConnectionFactory, Queue queue) {
+      SimpleMessageListenerContainer container =
+          new SimpleMessageListenerContainer(cachingConnectionFactory);
+      container.setQueues(queue);
+      container.setMessageListener(new MessageListenerAdapter(new MessageListenerTest()));
+
+      return container;
+    }
+
+    class MessageListenerTest {
+
+      public void handleMessage(Object message) {}
     }
   }
 }

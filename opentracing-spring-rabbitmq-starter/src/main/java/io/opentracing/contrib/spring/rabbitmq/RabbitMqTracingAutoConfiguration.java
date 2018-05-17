@@ -22,6 +22,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.util.Assert;
 
@@ -33,6 +34,7 @@ import org.springframework.util.Assert;
 @Configuration
 @ConditionalOnClass({Message.class, RabbitTemplate.class})
 @ConditionalOnBean({Tracer.class, RabbitTemplate.class})
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 public class RabbitMqTracingAutoConfiguration {
 
   @Autowired @Lazy private Tracer tracer;

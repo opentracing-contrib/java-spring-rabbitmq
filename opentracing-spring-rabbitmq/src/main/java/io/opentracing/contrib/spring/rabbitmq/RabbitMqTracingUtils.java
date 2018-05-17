@@ -15,6 +15,7 @@ package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.References;
 import io.opentracing.Scope;
+import io.opentracing.ScopeManager;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -58,13 +59,18 @@ final class RabbitMqTracingUtils {
             .ignoreActiveSpan()
             .withTag(Tags.SPAN_KIND.getKey(), RabbitMqTracingTags.SPAN_KIND_PRODUCER);
 
-    Optional<SpanContext> spanContext = Optional.empty();
+    ScopeManager scopeManager = tracer.scopeManager();
+    Optional<SpanContext> existingSpanContext = Optional.ofNullable(scopeManager)
+        .map(ScopeManager::active)
+        .map(Scope::span)
+        .map(Span::context);
+
+    existingSpanContext.ifPresent(spanBuilder::asChildOf);
 
     if (messageProperties.getHeaders() != null) {
-      spanContext = findParent(messageProperties, tracer);
+      Optional<SpanContext> messageParentContext = findParent(messageProperties, tracer);
+      messageParentContext.ifPresent(spanBuilder::asChildOf);
     }
-
-    spanContext.ifPresent(spanBuilder::asChildOf);
 
     return spanBuilder.startActive(true);
   }
