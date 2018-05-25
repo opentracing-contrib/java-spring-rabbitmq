@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="5 seconds">
+
+  <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d [%10t] %-5p %50.50c - %m%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- ========== -->
+  <!-- Log levels -->
+  <!-- ========== -->
+  <logger name="io.opentracing.contrib.spring.rabbitmq" level="info"/>
+  <logger name="io.arivera.oss" level="error"/>
+
+  <!-- ==== -->
+  <!-- Root -->
+  <!-- ==== -->
+  <root level="info">
+    <appender-ref ref="stdout"/>
+  </root>
+
+</configuration>
