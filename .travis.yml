@@ -3,9 +3,6 @@ dist: trusty
 
 sudo: required
 
-services:
-  - rabbitmq
-
 language: java
 jdk:
   - oraclejdk8
