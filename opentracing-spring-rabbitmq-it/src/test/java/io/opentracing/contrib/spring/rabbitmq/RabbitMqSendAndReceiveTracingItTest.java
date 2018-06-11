@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.core.BindingBuilder;
@@ -69,10 +70,10 @@ public class RabbitMqSendAndReceiveTracingItTest extends AbstractTestExecutionLi
   @Autowired private CachingConnectionFactory cachingConnectionFactory;
   @Autowired private RabbitAdmin rabbitAdmin;
 
-  private EmbeddedRabbitMq rabbitMq;
+  private static EmbeddedRabbitMq rabbitMq;
 
-  @Override
-  public void beforeTestClass(TestContext testContext) {
+  @BeforeClass
+  public static void beforeClass() {
     EmbeddedRabbitMqConfig config =
         new EmbeddedRabbitMqConfig.Builder()
             .rabbitMqServerInitializationTimeoutInMillis(300000)
