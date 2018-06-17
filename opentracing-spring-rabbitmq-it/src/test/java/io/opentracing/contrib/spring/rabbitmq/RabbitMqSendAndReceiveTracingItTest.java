@@ -28,6 +28,7 @@ import io.opentracing.util.GlobalTracerTestUtil;
 import java.util.Collection;
 import java.util.List;
 import org.hamcrest.Matchers;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,9 +49,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.test.context.TestContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.support.AbstractTestExecutionListener;
 import org.springframework.util.Assert;
 
 /**
@@ -61,14 +60,11 @@ import org.springframework.util.Assert;
     classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class}
 )
 @RunWith(SpringJUnit4ClassRunner.class)
-public class RabbitMqSendAndReceiveTracingItTest extends AbstractTestExecutionListener {
+public class RabbitMqSendAndReceiveTracingItTest {
 
   private static final int PORT = 5672;
   @Autowired private RabbitTemplate rabbitTemplate;
   @Autowired private MockTracer tracer;
-  @Autowired private SimpleMessageListenerContainer simpleMessageListenerContainer;
-  @Autowired private CachingConnectionFactory cachingConnectionFactory;
-  @Autowired private RabbitAdmin rabbitAdmin;
 
   private static EmbeddedRabbitMq rabbitMq;
 
@@ -83,11 +79,8 @@ public class RabbitMqSendAndReceiveTracingItTest extends AbstractTestExecutionLi
     rabbitMq.start();
   }
 
-  @Override
-  public void afterTestClass(TestContext testContext) {
-    rabbitAdmin.deleteExchange("myExchange");
-    cachingConnectionFactory.destroy();
-    simpleMessageListenerContainer.destroy();
+  @AfterClass
+  public static void tearDown() {
     rabbitMq.stop();
   }
 
