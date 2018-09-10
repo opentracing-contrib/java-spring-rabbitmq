@@ -19,6 +19,7 @@ import static org.junit.Assert.assertThat;
 
 import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMq;
 import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMqConfig;
+import io.arivera.oss.embedded.rabbitmq.helpers.StartupException;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.mock.MockSpan;
@@ -76,7 +77,11 @@ public class RabbitMqSendAndReceiveTracingItTest {
             .port(PORT)
             .build();
     rabbitMq = new EmbeddedRabbitMq(config);
-    rabbitMq.start();
+    try {
+      rabbitMq.start();
+    } catch (StartupException e) {
+      throw new RuntimeException("Could not confirm RabbitMQ Server initialization completed successfully - perhaps real RabbitMQ server is running on port " + PORT + "?", e);
+    }
   }
 
   @AfterClass
