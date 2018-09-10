@@ -86,57 +86,45 @@ public class RabbitMqSendAndReceiveTracingItTest {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
-    await()
-        .until(
-            () -> {
-              List<MockSpan> mockSpans = tracer.finishedSpans();
-              return (mockSpans.size() == 2);
-            });
-
-    List<MockSpan> spans = tracer.finishedSpans();
-    assertEquals(2, spans.size());
-    MockSpan mockSentSpan = spans.get(0);
-    assertThat(
-        mockSentSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
-    assertThat(mockSentSpan.tags(), Matchers.notNullValue());
-    assertThat(mockSentSpan.tags().size(), Matchers.is(5));
-    assertThat(mockSentSpan.tags().get("messageid"), Matchers.notNullValue());
-    assertThat(
-        mockSentSpan.tags().get("component"),
-        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
-    assertThat(mockSentSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
-    assertThat(
-        mockSentSpan.tags().get("span.kind"),
-        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
-    assertThat(mockSentSpan.tags().get("routingkey"), Matchers.equalTo("#"));
-
-    MockSpan mockReceivedSpan = spans.get(1);
-    assertThat(
-        mockReceivedSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
-    assertThat(mockReceivedSpan.tags(), Matchers.notNullValue());
-    assertThat(mockReceivedSpan.tags().size(), Matchers.is(6));
-    assertThat(mockReceivedSpan.tags().get("messageid"), Matchers.notNullValue());
-    assertThat(
-        mockReceivedSpan.tags().get("component"),
-        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
-    assertThat(mockReceivedSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
-    assertThat(
-        mockReceivedSpan.tags().get("span.kind"),
-        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
-    assertThat(mockReceivedSpan.tags().get("routingkey"), Matchers.equalTo("#"));
-    assertThat(mockReceivedSpan.tags().get("consumerqueue"), Matchers.equalTo("myQueue"));
-    assertThat(mockReceivedSpan.generatedErrors().size(), Matchers.is(0));
-    assertSameTraceId(spans);
+    long parentSpanId = 0;
+    assertConsumerAndProducerSpans(parentSpanId);
   }
 
   @Test
   public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {
     Span span = tracer.buildSpan("parentOperation").start();
     tracer.scopeManager().activate(span, false);
+    MockSpan.MockContext context = (MockSpan.MockContext) tracer.activeSpan().context();
+    long parentSpanId = context.spanId();
 
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
+    assertConsumerAndProducerSpans(parentSpanId);
+  }
+
+  private void assertConsumerAndProducerSpans(long parentSpanId) {
+    List<MockSpan> spans = awaitFinishedSpans();
+    assertEquals(2, spans.size());
+    assertRabbitProducerSpan(spans.get(0), parentSpanId);
+
+    assertRabbitConsumerSpan(spans.get(1));
+    assertSameTraceId(spans);
+  }
+
+  private void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
+    String expectedConsumerQueueName = "myQueue";
+    assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6);
+    assertThat(mockReceivedSpan.tags().get("consumerqueue"), Matchers.equalTo(expectedConsumerQueueName));
+    assertThat(mockReceivedSpan.generatedErrors().size(), Matchers.is(0));
+  }
+
+  private void assertRabbitProducerSpan(MockSpan mockSentSpan, Long expectedParentSpanId) {
+    assertThat(mockSentSpan.parentId(), Matchers.equalTo(expectedParentSpanId));
+    assertRabbitSpan(mockSentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER, 5);
+  }
+
+  private List<MockSpan> awaitFinishedSpans() {
     await()
         .until(
             () -> {
@@ -144,16 +132,14 @@ public class RabbitMqSendAndReceiveTracingItTest {
               return (mockSpans.size() == 2);
             });
 
-    MockSpan.MockContext context = (MockSpan.MockContext) tracer.activeSpan().context();
-    long parentSpanId = context.spanId();
-    List<MockSpan> spans = tracer.finishedSpans();
-    assertEquals(2, spans.size());
-    MockSpan mockSentSpan = spans.get(0);
-    assertThat(mockSentSpan.parentId(), Matchers.equalTo(parentSpanId));
+    return tracer.finishedSpans();
+  }
+
+  private void assertRabbitSpan(MockSpan mockSentSpan, String spanKindProducer, int expectedTagsCount) {
     assertThat(
-        mockSentSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
+        mockSentSpan.operationName(), Matchers.equalTo(spanKindProducer));
     assertThat(mockSentSpan.tags(), Matchers.notNullValue());
-    assertThat(mockSentSpan.tags().size(), Matchers.is(5));
+    assertThat(mockSentSpan.tags().size(), Matchers.is(expectedTagsCount));
     assertThat(mockSentSpan.tags().get("messageid"), Matchers.notNullValue());
     assertThat(
         mockSentSpan.tags().get("component"),
@@ -161,26 +147,8 @@ public class RabbitMqSendAndReceiveTracingItTest {
     assertThat(mockSentSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
     assertThat(
         mockSentSpan.tags().get("span.kind"),
-        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
+        Matchers.equalTo(spanKindProducer));
     assertThat(mockSentSpan.tags().get("routingkey"), Matchers.equalTo("#"));
-
-    MockSpan mockReceivedSpan = spans.get(1);
-    assertThat(
-        mockReceivedSpan.operationName(), Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
-    assertThat(mockReceivedSpan.tags(), Matchers.notNullValue());
-    assertThat(mockReceivedSpan.tags().size(), Matchers.is(6));
-    assertThat(mockReceivedSpan.tags().get("messageid"), Matchers.notNullValue());
-    assertThat(
-        mockReceivedSpan.tags().get("component"),
-        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
-    assertThat(mockReceivedSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
-    assertThat(
-        mockReceivedSpan.tags().get("span.kind"),
-        Matchers.equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
-    assertThat(mockReceivedSpan.tags().get("routingkey"), Matchers.equalTo("#"));
-    assertThat(mockReceivedSpan.tags().get("consumerqueue"), Matchers.equalTo("myQueue"));
-    assertThat(mockReceivedSpan.generatedErrors().size(), Matchers.is(0));
-    assertSameTraceId(spans);
   }
 
   private void assertSameTraceId(Collection<MockSpan> spans) {
