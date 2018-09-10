@@ -44,12 +44,11 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
   @Autowired private RabbitTemplate rabbitTemplate;
 
   @Test
-  public void testSendAndReceiveRabbitMessage_whenUsingRabbitMqTracingAutoConfiguration() {
+  public void givenAutoConfiguredRabbitTemplate_convertAndSend_shouldBeTraced() {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
-    long parentSpanId = 0;
-    assertConsumerAndProducerSpans(parentSpanId);
+    assertConsumerAndProducerSpans(0);
   }
 
   @Test
