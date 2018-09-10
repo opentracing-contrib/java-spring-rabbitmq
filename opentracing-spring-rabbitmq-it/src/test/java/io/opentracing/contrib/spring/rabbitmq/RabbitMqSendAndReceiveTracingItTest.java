@@ -13,6 +13,7 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import static io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.PORT;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -21,10 +22,8 @@ import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMq;
 import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMqConfig;
 import io.arivera.oss.embedded.rabbitmq.helpers.StartupException;
 import io.opentracing.Span;
-import io.opentracing.Tracer;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
-import io.opentracing.util.GlobalTracerTestUtil;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -34,24 +33,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
-import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
-import org.springframework.amqp.support.converter.SimpleMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.util.Assert;
 
 /**
  * @author Gilles Robert
@@ -63,7 +50,6 @@ import org.springframework.util.Assert;
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqSendAndReceiveTracingItTest {
 
-  private static final int PORT = 5672;
   @Autowired private RabbitTemplate rabbitTemplate;
   @Autowired private MockTracer tracer;
 
@@ -207,97 +193,11 @@ public class RabbitMqSendAndReceiveTracingItTest {
   }
 
   @Configuration
-  @EnableAspectJAutoProxy(proxyTargetClass = true)
+  @Import({
+      RabbitWithRabbitTemplateConfig.class,
+      TracerConfig.class,
+      RabbitMqTracingManualConfig.class
+  })
   static class TestConfig {
-
-    @Autowired @Lazy private Tracer tracer;
-
-    @Bean
-    public MockTracer mockTracer() {
-      GlobalTracerTestUtil.resetGlobalTracer();
-      return new MockTracer();
-    }
-
-    @Bean
-    public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate) {
-      Assert.notNull(
-          rabbitTemplate.getMessageConverter(),
-          "RabbitTemplate has no message converter configured");
-      return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getMessageConverter());
-    }
-
-    @Bean
-    public RabbitMqReceiveTracingInterceptor rabbitMqReceiveTracingInterceptor() {
-      return new RabbitMqReceiveTracingInterceptor(tracer);
-    }
-
-    @Bean
-    public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(
-        RabbitMqReceiveTracingInterceptor interceptor) {
-      return new RabbitMqBeanPostProcessor(interceptor);
-    }
-
-    @Bean
-    public Queue queue() {
-      return new Queue("myQueue", false);
-    }
-
-    @Bean
-    public RabbitTemplate rabbitTemplate(RabbitConnectionFactoryBean rabbitConnectionFactoryBean)
-        throws Exception {
-      final CachingConnectionFactory cachingConnectionFactory =
-          new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
-      SimpleMessageConverter messageConverter = new SimpleMessageConverter();
-      messageConverter.setCreateMessageIds(true);
-      RabbitTemplate rabbitTemplate = new RabbitTemplate(cachingConnectionFactory);
-      rabbitTemplate.setMessageConverter(messageConverter);
-      return rabbitTemplate;
-    }
-
-    @Bean
-    public RabbitConnectionFactoryBean rabbitConnectionFactoryBean() throws Exception {
-      RabbitConnectionFactoryBean rabbitConnectionFactoryBean = new RabbitConnectionFactoryBean();
-      rabbitConnectionFactoryBean.setUsername("guest");
-      rabbitConnectionFactoryBean.setPassword("guest");
-      rabbitConnectionFactoryBean.setHost("localhost");
-      rabbitConnectionFactoryBean.setVirtualHost("/");
-      rabbitConnectionFactoryBean.setPort(PORT);
-      rabbitConnectionFactoryBean.afterPropertiesSet();
-      return rabbitConnectionFactoryBean;
-    }
-
-    @Bean
-    public CachingConnectionFactory cachingConnectionFactory(
-        RabbitConnectionFactoryBean rabbitConnectionFactoryBean) throws Exception {
-      return new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
-    }
-
-    @Bean
-    public RabbitAdmin rabbitAdmin(Queue queue, CachingConnectionFactory cachingConnectionFactory) {
-      final TopicExchange exchange = new TopicExchange("myExchange", true, false);
-
-      final RabbitAdmin admin = new RabbitAdmin(cachingConnectionFactory);
-      admin.declareQueue(queue);
-      admin.declareExchange(exchange);
-      admin.declareBinding(BindingBuilder.bind(queue).to(exchange).with("#"));
-
-      return admin;
-    }
-
-    @Bean
-    public SimpleMessageListenerContainer messageListenerContainer(
-        CachingConnectionFactory cachingConnectionFactory, Queue queue) {
-      SimpleMessageListenerContainer container =
-          new SimpleMessageListenerContainer(cachingConnectionFactory);
-      container.setQueues(queue);
-      container.setMessageListener(new MessageListenerAdapter(new MessageListenerTest()));
-
-      return container;
-    }
-
-    class MessageListenerTest {
-
-      public void handleMessage(Object message) {}
-    }
   }
 }
