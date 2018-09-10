@@ -25,9 +25,9 @@ import io.opentracing.Tracer;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 import io.opentracing.util.GlobalTracerTestUtil;
-
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -74,6 +74,7 @@ public class RabbitMqSendAndReceiveTracingItTest {
     EmbeddedRabbitMqConfig config =
         new EmbeddedRabbitMqConfig.Builder()
             .rabbitMqServerInitializationTimeoutInMillis(300000)
+            .defaultRabbitMqCtlTimeoutInMillis(TimeUnit.SECONDS.toMillis(8))
             .port(PORT)
             .build();
     rabbitMq = new EmbeddedRabbitMq(config);
