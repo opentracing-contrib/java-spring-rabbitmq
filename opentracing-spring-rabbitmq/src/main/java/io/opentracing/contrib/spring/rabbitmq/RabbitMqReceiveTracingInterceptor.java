@@ -32,6 +32,7 @@ import org.springframework.aop.BeforeAdvice;
 class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvice, BeforeAdvice {
 
   private final Tracer tracer;
+  private final RabbitMqSpanDecorator spanDecorator;
 
   @Override
   public Object invoke(MethodInvocation methodInvocation) throws Throwable {
@@ -39,7 +40,6 @@ class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvic
     MessageProperties messageProperties = message.getMessageProperties();
 
     Optional<Scope> child = RabbitMqTracingUtils.buildReceiveSpan(messageProperties, tracer);
-    RabbitMqSpanDecorator spanDecorator = new RabbitMqSpanDecorator();
     child.ifPresent(scope -> spanDecorator.onReceive(messageProperties, scope.span()));
 
     // CHECKSTYLE:OFF

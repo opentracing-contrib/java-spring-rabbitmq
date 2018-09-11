@@ -34,6 +34,7 @@ class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
   private final MessageConverter messageConverter;
+  private final RabbitMqSpanDecorator spanDecorator;
 
   // CHECKSTYLE:OFF
 
@@ -58,7 +59,6 @@ class RabbitMqSendTracingAspect {
         Format.Builtin.TEXT_MAP,
         new RabbitMqInjectAdapter(messageProperties));
 
-    RabbitMqSpanDecorator spanDecorator = new RabbitMqSpanDecorator();
     spanDecorator.onSend(messageProperties, exchange, routingKey, scope.span());
 
     args[2] = convertedMessage;

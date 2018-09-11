@@ -30,21 +30,26 @@ public class RabbitMqTracingManualConfig {
   @Autowired @Lazy private Tracer tracer;
 
   @Bean
-  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate) {
+  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
     Assert.notNull(
         rabbitTemplate.getMessageConverter(),
         "RabbitTemplate has no message converter configured");
-    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getMessageConverter());
+    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getMessageConverter(), spanDecorator);
   }
 
   @Bean
-  public RabbitMqReceiveTracingInterceptor rabbitMqReceiveTracingInterceptor() {
-    return new RabbitMqReceiveTracingInterceptor(tracer);
+  public RabbitMqReceiveTracingInterceptor rabbitMqReceiveTracingInterceptor(RabbitMqSpanDecorator spanDecorator) {
+    return new RabbitMqReceiveTracingInterceptor(tracer, spanDecorator);
   }
 
   @Bean
   public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(
       RabbitMqReceiveTracingInterceptor interceptor) {
     return new RabbitMqBeanPostProcessor(interceptor);
+  }
+
+  @Bean
+  public RabbitMqSpanDecorator rabbitMqSpanDecorator() {
+    return new RabbitMqSpanDecorator();
   }
 }
