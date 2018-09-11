@@ -13,24 +13,20 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import static io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.PORT;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMq;
-import io.arivera.oss.embedded.rabbitmq.EmbeddedRabbitMqConfig;
-import io.arivera.oss.embedded.rabbitmq.helpers.StartupException;
 import io.opentracing.Span;
+import io.opentracing.contrib.spring.rabbitmq.testrule.TestRabbitServerResource;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
+
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -49,32 +45,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 )
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqSendAndReceiveTracingItTest {
+  @ClassRule // could remove this annotation to reuse locally running RabbitMq server to speed up tests
+  public static TestRabbitServerResource rabbitServer = new TestRabbitServerResource();
 
   @Autowired private RabbitTemplate rabbitTemplate;
   @Autowired private MockTracer tracer;
-
-  private static EmbeddedRabbitMq rabbitMq;
-
-  @BeforeClass
-  public static void beforeClass() {
-    EmbeddedRabbitMqConfig config =
-        new EmbeddedRabbitMqConfig.Builder()
-            .rabbitMqServerInitializationTimeoutInMillis(300000)
-            .defaultRabbitMqCtlTimeoutInMillis(TimeUnit.SECONDS.toMillis(8))
-            .port(PORT)
-            .build();
-    rabbitMq = new EmbeddedRabbitMq(config);
-    try {
-      rabbitMq.start();
-    } catch (StartupException e) {
-      throw new RuntimeException("Could not confirm RabbitMQ Server initialization completed successfully - perhaps real RabbitMQ server is running on port " + PORT + "?", e);
-    }
-  }
-
-  @AfterClass
-  public static void tearDown() {
-    rabbitMq.stop();
-  }
 
   @Before
   public void setup() {

@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitWithoutRabbitTemplateConfig {
-  static final int PORT = 5672;
+  public static final int PORT = 5672;
 
   @Bean
   public Queue queue() {
