@@ -26,13 +26,22 @@ import io.opentracing.mock.MockTracer;
 
 import java.util.Collection;
 import java.util.List;
+import org.awaitility.Duration;
+import org.awaitility.core.ConditionTimeoutException;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
+// Needed to destroy rabbit message listeners (created by RabbitWithoutRabbitTemplateConfig.messageListenerContainer)
+// to avoid race condition errors related to listeners from previous test applicationContext grabbing messages
+// of next test that results in rabbit-receive span being added to MockTracer of previous test
+// and hence next test never sees that span when checking finished spans.
+@DirtiesContext
 public abstract class BaseRabbitMqTracingItTest {
   @ClassRule // could remove this annotation to reuse locally running RabbitMq server to speed up tests
   public static TestRabbitServerResource rabbitServer = new TestRabbitServerResource();
@@ -92,6 +101,7 @@ public abstract class BaseRabbitMqTracingItTest {
 
   protected List<MockSpan> awaitFinishedSpans() {
     await()
+        .timeout(Duration.TWO_SECONDS)
         .until(
             () -> {
               List<MockSpan> mockSpans = tracer.finishedSpans();
@@ -99,6 +109,15 @@ public abstract class BaseRabbitMqTracingItTest {
             });
 
     return tracer.finishedSpans();
+  }
+
+  protected void checkNoSpans() {
+    try {
+      List<MockSpan> spans = awaitFinishedSpans();
+      Assert.fail("Expected not to receive trace spans when autoconfiguration isn't enabled, but got: " + spans);
+    } catch (ConditionTimeoutException e) {
+      assertThat(tracer.finishedSpans().size(), equalTo(0));
+    }
   }
 
 }
