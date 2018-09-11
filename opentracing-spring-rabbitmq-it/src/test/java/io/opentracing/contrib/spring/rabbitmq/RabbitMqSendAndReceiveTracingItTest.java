@@ -13,28 +13,15 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-
 import io.opentracing.Span;
-import io.opentracing.contrib.spring.rabbitmq.testrule.TestRabbitServerResource;
 import io.opentracing.mock.MockSpan;
-import io.opentracing.mock.MockTracer;
 
-import java.util.Collection;
-import java.util.List;
-import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
  * @author Gilles Robert
@@ -43,18 +30,9 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
     classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class}
 )
-@RunWith(SpringJUnit4ClassRunner.class)
-public class RabbitMqSendAndReceiveTracingItTest {
-  @ClassRule // could remove this annotation to reuse locally running RabbitMq server to speed up tests
-  public static TestRabbitServerResource rabbitServer = new TestRabbitServerResource();
+public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTest {
 
   @Autowired private RabbitTemplate rabbitTemplate;
-  @Autowired private MockTracer tracer;
-
-  @Before
-  public void setup() {
-    tracer.reset();
-  }
 
   @Test
   public void testSendAndReceiveRabbitMessage() {
@@ -76,63 +54,6 @@ public class RabbitMqSendAndReceiveTracingItTest {
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
     assertConsumerAndProducerSpans(parentSpanId);
-  }
-
-  private void assertConsumerAndProducerSpans(long parentSpanId) {
-    List<MockSpan> spans = awaitFinishedSpans();
-    assertEquals(2, spans.size());
-    assertRabbitProducerSpan(spans.get(0), parentSpanId);
-
-    assertRabbitConsumerSpan(spans.get(1));
-    assertSameTraceId(spans);
-  }
-
-  private void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
-    String expectedConsumerQueueName = "myQueue";
-    assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6);
-    assertThat(mockReceivedSpan.tags().get("consumerqueue"), Matchers.equalTo(expectedConsumerQueueName));
-    assertThat(mockReceivedSpan.generatedErrors().size(), Matchers.is(0));
-  }
-
-  private void assertRabbitProducerSpan(MockSpan mockSentSpan, Long expectedParentSpanId) {
-    assertThat(mockSentSpan.parentId(), Matchers.equalTo(expectedParentSpanId));
-    assertRabbitSpan(mockSentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER, 5);
-  }
-
-  private List<MockSpan> awaitFinishedSpans() {
-    await()
-        .until(
-            () -> {
-              List<MockSpan> mockSpans = tracer.finishedSpans();
-              return (mockSpans.size() == 2);
-            });
-
-    return tracer.finishedSpans();
-  }
-
-  private void assertRabbitSpan(MockSpan mockSentSpan, String spanKindProducer, int expectedTagsCount) {
-    assertThat(
-        mockSentSpan.operationName(), Matchers.equalTo(spanKindProducer));
-    assertThat(mockSentSpan.tags(), Matchers.notNullValue());
-    assertThat(mockSentSpan.tags().size(), Matchers.is(expectedTagsCount));
-    assertThat(mockSentSpan.tags().get("messageid"), Matchers.notNullValue());
-    assertThat(
-        mockSentSpan.tags().get("component"),
-        Matchers.equalTo(RabbitMqTracingTags.RABBITMQ.getKey()));
-    assertThat(mockSentSpan.tags().get("exchange"), Matchers.equalTo("myExchange"));
-    assertThat(
-        mockSentSpan.tags().get("span.kind"),
-        Matchers.equalTo(spanKindProducer));
-    assertThat(mockSentSpan.tags().get("routingkey"), Matchers.equalTo("#"));
-  }
-
-  private void assertSameTraceId(Collection<MockSpan> spans) {
-    if (!spans.isEmpty()) {
-      final long traceId = spans.iterator().next().context().traceId();
-      for (MockSpan span : spans) {
-        assertEquals(traceId, span.context().traceId());
-      }
-    }
   }
 
   @Configuration
