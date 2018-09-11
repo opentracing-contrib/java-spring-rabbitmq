@@ -43,6 +43,12 @@ public class TestRabbitServerResource extends ExternalResource {
 
   @Override
   protected void after() {
-    rabbitMq.stop();
+    try {
+      rabbitMq.stop();
+    } catch (IllegalStateException e) {
+      if (!"Stop shouldn't be called unless 'start()' was successful".equals(e.getMessage())) {
+        throw e;
+      }
+    }
   }
 }
