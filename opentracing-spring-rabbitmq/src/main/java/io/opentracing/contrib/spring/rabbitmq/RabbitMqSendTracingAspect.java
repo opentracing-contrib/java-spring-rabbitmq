@@ -17,6 +17,7 @@ import io.opentracing.Scope;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 
+import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,15 +29,11 @@ import org.springframework.amqp.support.converter.MessageConverter;
  * @author Gilles Robert
  */
 @Aspect
+@AllArgsConstructor
 class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
   private final MessageConverter messageConverter;
-
-  RabbitMqSendTracingAspect(Tracer tracer, MessageConverter messageConverter) {
-    this.tracer = tracer;
-    this.messageConverter = messageConverter;
-  }
 
   // CHECKSTYLE:OFF
 
