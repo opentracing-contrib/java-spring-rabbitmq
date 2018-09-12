@@ -23,16 +23,16 @@ import org.springframework.amqp.core.MessageProperties;
 /**
  * @author Gilles Robert
  */
-class RabbitMqSpanDecorator {
+public class RabbitMqSpanDecorator {
 
-  void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
+  protected void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
     Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
     RabbitMqTracingTags.EXCHANGE.set(span, exchange);
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
     RabbitMqTracingTags.ROUTING_KEY.set(span, routingKey);
   }
 
-  void onReceive(MessageProperties messageProperties, Span span) {
+  protected void onReceive(MessageProperties messageProperties, Span span) {
     Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
     RabbitMqTracingTags.EXCHANGE.set(span, messageProperties.getReceivedExchange());
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
@@ -40,7 +40,7 @@ class RabbitMqSpanDecorator {
     RabbitMqTracingTags.CONSUMER_QUEUE.set(span, messageProperties.getConsumerQueue());
   }
 
-  void onError(Exception ex, Span span) {
+  protected void onError(Exception ex, Span span) {
     Map<String, Object> exceptionLogs = new LinkedHashMap<>(2);
     exceptionLogs.put("event", Tags.ERROR.getKey());
     exceptionLogs.put("error.object", ex);
