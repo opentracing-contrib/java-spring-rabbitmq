@@ -66,19 +66,24 @@ public abstract class BaseRabbitMqTracingItTest {
   private void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
     String expectedConsumerQueueName = "myQueue";
     assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6);
+    assertThat(mockReceivedSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
     assertThat(mockReceivedSpan.tags().get("consumerqueue"), equalTo(expectedConsumerQueueName));
     assertThat(mockReceivedSpan.generatedErrors().size(), is(0));
   }
 
-  private void assertRabbitProducerSpan(MockSpan mockSentSpan, Long expectedParentSpanId) {
+  private void assertRabbitProducerSpan(MockSpan mockSentSpan, long expectedParentSpanId) {
     assertThat(mockSentSpan.parentId(), equalTo(expectedParentSpanId));
     assertRabbitSpan(mockSentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER, 5);
+    assertThat(mockSentSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
   }
 
   private void assertRabbitSpan(MockSpan mockSentSpan, String spanKind, int expectedTagsCount) {
-    assertThat(mockSentSpan.operationName(), equalTo(spanKind));
     assertThat(mockSentSpan.tags(), notNullValue());
     assertThat(mockSentSpan.tags().size(), is(expectedTagsCount));
+    assertSpanRabbitTags(mockSentSpan, spanKind);
+  }
+
+  protected void assertSpanRabbitTags(MockSpan mockSentSpan, String spanKind) {
     assertThat(mockSentSpan.tags().get("messageid"), notNullValue());
     assertThat(
         mockSentSpan.tags().get("component"),
