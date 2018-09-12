@@ -13,16 +13,13 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import io.opentracing.Scope;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
 
 import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.support.converter.MessageConverter;
 
 /**
@@ -47,38 +44,21 @@ class RabbitMqSendTracingAspect {
   public Object traceRabbitSend(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
-    final Object[] args = pjp.getArgs();
-
-    Message convertedMessage = convertMessageIfNecessary(message);
-
-    final MessageProperties messageProperties = convertedMessage.getMessageProperties();
-
-    Scope scope = RabbitMqTracingUtils.buildSendSpan(tracer, messageProperties);
-    tracer.inject(
-        scope.span().context(),
-        Format.Builtin.TEXT_MAP,
-        new RabbitMqInjectAdapter(messageProperties));
-
-    spanDecorator.onSend(messageProperties, exchange, routingKey, scope.span());
-
-    args[2] = convertedMessage;
-
-    try {
-      return pjp.proceed(args);
-    } catch (Exception ex) {
-      spanDecorator.onError(ex, scope.span());
-      throw ex;
-    } finally {
-      scope.close();
-    }
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
   }
   // CHECKSTYLE:ON
 
-  private Message convertMessageIfNecessary(final Object object) {
-    if (object instanceof Message) {
-      return (Message) object;
-    }
-
-    return messageConverter.toMessage(object, new MessageProperties());
+  private RabbitMqSendTracingHelper createTracingHelper() {
+    return new RabbitMqSendTracingHelper(tracer, messageConverter, spanDecorator);
   }
+
+  private Object proceedReplacingMessage(ProceedingJoinPoint pjp, Message convertedMessage, int messageArgumentIndex)
+      throws Throwable {
+    final Object[] args = pjp.getArgs();
+    args[messageArgumentIndex] = convertedMessage;
+    return pjp.proceed(args);
+  }
+
 }
