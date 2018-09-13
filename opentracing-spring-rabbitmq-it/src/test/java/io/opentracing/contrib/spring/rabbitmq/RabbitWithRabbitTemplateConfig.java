@@ -33,9 +33,13 @@ public class RabbitWithRabbitTemplateConfig {
       throws Exception {
     final CachingConnectionFactory cachingConnectionFactory =
         new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
+    RabbitTemplate rabbitTemplate = new RabbitTemplate(cachingConnectionFactory);
+    return configureRabbitTemplate(rabbitTemplate);
+  }
+
+  public static RabbitTemplate configureRabbitTemplate(RabbitTemplate rabbitTemplate) {
     SimpleMessageConverter messageConverter = new SimpleMessageConverter();
     messageConverter.setCreateMessageIds(true);
-    RabbitTemplate rabbitTemplate = new RabbitTemplate(cachingConnectionFactory);
     rabbitTemplate.setMessageConverter(messageConverter);
     return rabbitTemplate;
   }

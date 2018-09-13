@@ -19,6 +19,7 @@ import io.opentracing.propagation.Format;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Address;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.support.converter.MessageConverter;
@@ -32,6 +33,11 @@ class RabbitMqSendTracingHelper {
 
   Object doWithTracingHeadersMessage(String exchange, String routingKey, Object message, ProceedFunction proceedCallback)
       throws Throwable {
+    if (routingKey != null && routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
+      // don't create new span for response messages when sending reply to AMQP requests that expected response message
+      Message convertedMessage = convertMessageIfNecessary(message);
+      return proceedCallback.apply(convertedMessage);
+    }
     Message messageWithTracingHeaders = doBefore(exchange, routingKey, message);
     try {
       Object resp = proceedCallback.apply(messageWithTracingHeaders);

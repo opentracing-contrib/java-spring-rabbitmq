@@ -13,6 +13,12 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThat;
+
+import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
+
 import org.junit.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -49,6 +55,7 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
     Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
 
     assertConsumerAndProducerSpans(0);
+    assertThat(new String(response.getBody(), UTF_8), equalTo(TestMessageListener.REPLY_MSG_PREFIX + message));
   }
 
   @Configuration
