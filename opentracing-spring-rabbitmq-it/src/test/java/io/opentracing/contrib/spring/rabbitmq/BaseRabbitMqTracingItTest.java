@@ -21,10 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 import io.opentracing.contrib.spring.rabbitmq.testrule.TestRabbitServerResource;
+import io.opentracing.contrib.spring.rabbitmq.util.FinishedSpansHelper;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 
-import java.util.Collection;
 import java.util.List;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionTimeoutException;
@@ -55,12 +55,12 @@ public abstract class BaseRabbitMqTracingItTest {
 
 
   protected void assertConsumerAndProducerSpans(long parentSpanId) {
-    List<MockSpan> spans = awaitFinishedSpans();
-    assertEquals(2, spans.size());
-    assertRabbitProducerSpan(spans.get(0), parentSpanId);
+    FinishedSpansHelper spans = awaitFinishedSpans();
+    assertEquals(2, spans.getAllSpans().size());
+    assertRabbitProducerSpan(spans.getSendSpan(), parentSpanId);
 
-    assertRabbitConsumerSpan(spans.get(1));
-    assertSameTraceId(spans);
+    assertRabbitConsumerSpan(spans.getReceiveSpan());
+    spans.assertSameTraceId();
   }
 
   private void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
@@ -95,16 +95,7 @@ public abstract class BaseRabbitMqTracingItTest {
     assertThat(mockSentSpan.tags().get("routingkey"), equalTo("#"));
   }
 
-  private void assertSameTraceId(Collection<MockSpan> spans) {
-    if (!spans.isEmpty()) {
-      final long traceId = spans.iterator().next().context().traceId();
-      for (MockSpan span : spans) {
-        assertEquals(traceId, span.context().traceId());
-      }
-    }
-  }
-
-  protected List<MockSpan> awaitFinishedSpans() {
+  protected FinishedSpansHelper awaitFinishedSpans() {
     await()
         .timeout(Duration.TWO_SECONDS)
         .until(
@@ -113,12 +104,12 @@ public abstract class BaseRabbitMqTracingItTest {
               return (mockSpans.size() == 2);
             });
 
-    return tracer.finishedSpans();
+    return new FinishedSpansHelper(tracer.finishedSpans());
   }
 
   protected void checkNoSpans() {
     try {
-      List<MockSpan> spans = awaitFinishedSpans();
+      FinishedSpansHelper spans = awaitFinishedSpans();
       Assert.fail("Expected not to receive trace spans when autoconfiguration isn't enabled, but got: " + spans);
     } catch (ConditionTimeoutException e) {
       assertThat(tracer.finishedSpans().size(), equalTo(0));

@@ -17,9 +17,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 import io.opentracing.contrib.spring.rabbitmq.customizing.CustomizedRabbitMqSpanDecorator;
+import io.opentracing.contrib.spring.rabbitmq.util.FinishedSpansHelper;
 import io.opentracing.mock.MockSpan;
 
-import java.util.List;
 import org.junit.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,9 +45,9 @@ public class RabbitMqTracingAutoConfigurationCustomizationItTest extends BaseRab
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
-    List<MockSpan> spans = awaitFinishedSpans();
-    MockSpan sentSpan = spans.get(0);
-    MockSpan receiveSpan = spans.get(1);
+    FinishedSpansHelper spans = awaitFinishedSpans();
+    MockSpan sentSpan = spans.getSendSpan();
+    MockSpan receiveSpan = spans.getReceiveSpan();
 
     assertSpanRabbitTags(sentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER);
     assertThat(sentSpan.operationName(), equalTo(CustomizedRabbitMqSpanDecorator.OVERRIDEN_OPERATION_NAME_FOR_SENDING));
