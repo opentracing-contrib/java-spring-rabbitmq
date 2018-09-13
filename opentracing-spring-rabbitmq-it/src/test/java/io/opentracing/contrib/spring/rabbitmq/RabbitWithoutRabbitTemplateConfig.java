@@ -96,12 +96,26 @@ public class RabbitWithoutRabbitTemplateConfig {
   @AllArgsConstructor
   public static class TestMessageListener implements ChannelAwareMessageListener {
     public static final String REPLY_MSG_PREFIX = "Reply: ";
+    public static final String HEADER_SLEEP_MILLIS = "sleep.millis";
     private final RabbitTemplateProvider rabbitTemplateProvider;
 
     @Override
     public void onMessage(Message message, Channel channel) {
       log.warn("Got message: {} from channel {}", message, channel);
+      sleepIfRequested((Long) message.getMessageProperties().getHeaders().get(HEADER_SLEEP_MILLIS));
       sendReplyIfRequested(message);
+    }
+
+    private void sleepIfRequested(Long sleepMillis) {
+      if (sleepMillis != null) {
+        try {
+          log.info("Sleeping {}ms as requested", sleepMillis);
+          Thread.sleep(sleepMillis);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+      }
     }
 
     private void sendReplyIfRequested(Message message) {

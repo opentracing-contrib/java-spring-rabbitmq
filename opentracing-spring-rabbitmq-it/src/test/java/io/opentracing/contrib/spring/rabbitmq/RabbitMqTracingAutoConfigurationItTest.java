@@ -15,10 +15,13 @@ package io.opentracing.contrib.spring.rabbitmq;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
-
+import io.opentracing.mock.MockSpan;
+import java.util.List;
 import org.junit.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
@@ -67,6 +70,27 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
 
     assertConsumerAndProducerSpans(0);
     assertThat(response.toString(), equalTo(TestMessageListener.REPLY_MSG_PREFIX + message));
+  }
+
+  @Test
+  public void givenMessageThatIsProcessedLongerThanRabbitTemplateTimeout_sendAndReceive_shouldProduceSpanWithError() {
+    final String message = "hello world message!";
+    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
+    requestMessage.getMessageProperties().setHeader(TestMessageListener.HEADER_SLEEP_MILLIS, RabbitWithRabbitTemplateConfig.RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS + 500);
+    Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
+
+    // response is null in case of timeout
+    assertThat(response, nullValue());
+    List<MockSpan> nowFinishedSpans = tracer.finishedSpans();
+    assertThat(nowFinishedSpans.size(), equalTo(1)); // only send span should be finished, consumer is still sleeping
+    MockSpan sendSpan = nowFinishedSpans.get(0);
+    assertSpanRabbitTags(sendSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER);
+    // check that when response wasn't sent before timeout, then error tag is added (so span of the trace could be highlighted in UI)
+    assertErrorTag(sendSpan);
+
+    MockSpan receiveSpan = awaitFinishedSpans().getReceiveSpan();
+    assertThat("Didn't receive receive span (perhaps consumer slept too long or didn't wait enough time to receive receive span?)", receiveSpan, notNullValue());
+    assertRabbitConsumerSpan(receiveSpan);
   }
 
   @Configuration

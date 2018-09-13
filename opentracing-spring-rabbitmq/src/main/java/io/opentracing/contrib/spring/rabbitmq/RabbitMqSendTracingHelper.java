@@ -14,22 +14,38 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
-
+import java.lang.reflect.Field;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.Address;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.util.ReflectionUtils;
 
 @RequiredArgsConstructor
 class RabbitMqSendTracingHelper {
+  private static final Field FIELD_REPLY_TIMEOUT = ReflectionUtils.findField(RabbitTemplate.class, "replyTimeout");
+  static {
+    FIELD_REPLY_TIMEOUT.setAccessible(true);
+  }
+
   private final Tracer tracer;
   private final MessageConverter messageConverter;
   private final RabbitMqSpanDecorator spanDecorator;
   private Scope scope;
+  private boolean nullResponseMeansError;
+  private RabbitTemplate rabbitTemplate;
+
+  RabbitMqSendTracingHelper nullResponseMeansTimeout(RabbitTemplate rabbitTemplate) {
+    this.nullResponseMeansError = true;
+    this.rabbitTemplate = rabbitTemplate;
+    return this;
+  }
 
   Object doWithTracingHeadersMessage(String exchange, String routingKey, Object message, ProceedFunction proceedCallback)
       throws Throwable {
@@ -41,6 +57,12 @@ class RabbitMqSendTracingHelper {
     Message messageWithTracingHeaders = doBefore(exchange, routingKey, message);
     try {
       Object resp = proceedCallback.apply(messageWithTracingHeaders);
+      if (resp == null && nullResponseMeansError) {
+        Span span = scope.span();
+        spanDecorator.onError(null, span);
+        long replyTimeout = (long) ReflectionUtils.getField(FIELD_REPLY_TIMEOUT, rabbitTemplate);
+        span.log("Timeout: AMQP request message handler hasn't sent reply AMQP message in " + replyTimeout + "ms");
+      }
       return resp;
     } catch (AmqpException ex) {
       spanDecorator.onError(ex, scope.span());

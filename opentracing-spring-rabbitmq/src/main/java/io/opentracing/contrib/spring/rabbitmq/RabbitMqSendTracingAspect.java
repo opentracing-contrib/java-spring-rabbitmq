@@ -14,13 +14,13 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Tracer;
-
 import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.amqp.support.converter.MessageConverter;
 
@@ -66,6 +66,7 @@ class RabbitMqSendTracingAspect {
       ProceedingJoinPoint pjp, String exchange, String routingKey, Message message, CorrelationData correlationData)
       throws Throwable {
     return createTracingHelper()
+        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
         .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
             proceedReplacingMessage(pjp, convertedMessage, 2));
   }
@@ -80,6 +81,7 @@ class RabbitMqSendTracingAspect {
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message, MessagePostProcessor messagePostProcessor, CorrelationData correlationData)
       throws Throwable {
     return createTracingHelper()
+        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
         .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
             proceedReplacingMessage(pjp, convertedMessage, 2));
   }

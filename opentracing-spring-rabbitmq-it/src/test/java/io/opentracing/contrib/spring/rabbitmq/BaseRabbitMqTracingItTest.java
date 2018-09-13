@@ -24,8 +24,10 @@ import io.opentracing.contrib.spring.rabbitmq.testrule.TestRabbitServerResource;
 import io.opentracing.contrib.spring.rabbitmq.util.FinishedSpansHelper;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
+import io.opentracing.tag.Tags;
 
 import java.util.List;
+import java.util.Map;
 import org.awaitility.Duration;
 import org.awaitility.core.ConditionTimeoutException;
 import org.junit.Assert;
@@ -63,7 +65,7 @@ public abstract class BaseRabbitMqTracingItTest {
     spans.assertSameTraceId();
   }
 
-  private void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
+  protected void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
     String expectedConsumerQueueName = "myQueue";
     assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6);
     assertThat(mockReceivedSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
@@ -93,6 +95,11 @@ public abstract class BaseRabbitMqTracingItTest {
         mockSentSpan.tags().get("span.kind"),
         equalTo(spanKind));
     assertThat(mockSentSpan.tags().get("routingkey"), equalTo("#"));
+  }
+
+  protected void assertErrorTag(MockSpan span) {
+    Map<String, Object> sendSpanTags = span.tags();
+    assertThat(sendSpanTags.get(Tags.ERROR.getKey()), equalTo(true));
   }
 
   protected FinishedSpansHelper awaitFinishedSpans() {

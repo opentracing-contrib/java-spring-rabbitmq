@@ -13,6 +13,7 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import java.util.concurrent.TimeUnit;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -28,6 +29,8 @@ import org.springframework.context.annotation.Import;
 @Import(RabbitWithoutRabbitTemplateConfig.class)
 public class RabbitWithRabbitTemplateConfig {
 
+  public static final long RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+
   @Bean
   public RabbitTemplate rabbitTemplate(RabbitConnectionFactoryBean rabbitConnectionFactoryBean)
       throws Exception {
@@ -41,6 +44,7 @@ public class RabbitWithRabbitTemplateConfig {
     SimpleMessageConverter messageConverter = new SimpleMessageConverter();
     messageConverter.setCreateMessageIds(true);
     rabbitTemplate.setMessageConverter(messageConverter);
+    rabbitTemplate.setReplyTimeout(RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS);
     return rabbitTemplate;
   }
 
