@@ -14,6 +14,7 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import org.junit.Test;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -39,6 +40,15 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
 
     long parentSpanId = 0;
     assertConsumerAndProducerSpans(parentSpanId);
+  }
+
+  @Test
+  public void givenAutoConfiguredRabbitTemplate_sendAndReceive_shouldBeTraced() {
+    final String message = "hello world message!";
+    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
+    Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
+
+    assertConsumerAndProducerSpans(0);
   }
 
   @Configuration

@@ -20,6 +20,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.amqp.support.converter.MessageConverter;
 
 /**
@@ -49,6 +50,27 @@ class RabbitMqSendTracingAspect {
             proceedReplacingMessage(pjp, convertedMessage, 2));
   }
   // CHECKSTYLE:ON
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // START: intercept public methods that eventually delegate to RabbitTemplate.doSendAndReceive                      //
+  // that can't be intercepted with AspectJ as it is protected
+
+  /**
+   * @see org.springframework.amqp.rabbit.core.RabbitTemplate#sendAndReceive(String, String, Message, CorrelationData)
+   */
+  @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.sendAndReceive(..)) && args(exchange,"
+      + "routingKey, message, correlationData)", argNames = "pjp,exchange,routingKey,message,correlationData"
+  )
+  public Object traceRabbitSendAndReceive(
+      ProceedingJoinPoint pjp, String exchange, String routingKey, Message message, CorrelationData correlationData)
+      throws Throwable {
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
+  }
+
+  // END: intercept public methods that eventually delegate to RabbitTemplate.doSendAndReceive                        //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   private RabbitMqSendTracingHelper createTracingHelper() {
     return new RabbitMqSendTracingHelper(tracer, messageConverter, spanDecorator);
