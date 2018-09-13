@@ -13,14 +13,17 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
+import org.springframework.amqp.rabbit.core.ChannelAwareMessageListener;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -69,13 +72,16 @@ public class RabbitWithoutRabbitTemplateConfig {
     SimpleMessageListenerContainer container =
         new SimpleMessageListenerContainer(cachingConnectionFactory);
     container.setQueues(queue);
-    container.setMessageListener(new MessageListenerAdapter(new MessageListenerTest()));
+    container.setMessageListener(new TestMessageListener());
 
     return container;
   }
 
-  class MessageListenerTest {
-
-    public void handleMessage(Object message) {}
+  @Slf4j
+  public static class TestMessageListener implements ChannelAwareMessageListener {
+    @Override
+    public void onMessage(Message message, Channel channel) {
+      log.warn("Got message: {} from channel {}", message, channel);
+    }
   }
 }
