@@ -40,6 +40,13 @@ public class RabbitMqSpanDecorator {
     RabbitMqTracingTags.CONSUMER_QUEUE.set(span, messageProperties.getConsumerQueue());
   }
 
+  /**
+   * Note, new span isn't created for reply messages.
+   * This extension point allows for example marking AMQP message consumer span with error for example based custom headers
+   */
+  protected void onSendReply(MessageProperties replyMessageProperties, String replyExchange, String replyRoutingKey, Span span) {
+  }
+
   protected void onError(Exception ex, Span span) {
     Map<String, Object> exceptionLogs = new LinkedHashMap<>(2);
     exceptionLogs.put("event", Tags.ERROR.getKey());

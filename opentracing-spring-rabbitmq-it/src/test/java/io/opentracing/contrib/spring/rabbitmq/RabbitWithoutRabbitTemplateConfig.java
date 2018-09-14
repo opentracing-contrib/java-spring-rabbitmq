@@ -97,6 +97,8 @@ public class RabbitWithoutRabbitTemplateConfig {
   public static class TestMessageListener implements ChannelAwareMessageListener {
     public static final String REPLY_MSG_PREFIX = "Reply: ";
     public static final String HEADER_SLEEP_MILLIS = "sleep.millis";
+    public static final String HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE = "add.custom.error";
+    public static final String HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER = "custom.error";
     private final RabbitTemplateProvider rabbitTemplateProvider;
 
     @Override
@@ -126,6 +128,12 @@ public class RabbitWithoutRabbitTemplateConfig {
         Address replyTo = new Address(replyToProperty);
         String replyMsg = REPLY_MSG_PREFIX + new String(message.getBody(), UTF_8);
         Message replyMessage = rabbitTemplate.getMessageConverter().toMessage(replyMsg, null);
+
+        Object addCustomResponseErrorMarkerHeader = messageProperties.getHeaders().get(HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE);
+        if (addCustomResponseErrorMarkerHeader != null) {
+          replyMessage.getMessageProperties().setHeader(HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER, "dummy error message");
+        }
+
         rabbitTemplate.convertAndSend(replyTo.getExchangeName(), replyTo.getRoutingKey(), replyMessage);
       }
     }

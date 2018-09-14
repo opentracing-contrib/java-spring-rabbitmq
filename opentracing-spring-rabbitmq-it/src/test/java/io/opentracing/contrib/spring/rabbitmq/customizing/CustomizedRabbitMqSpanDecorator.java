@@ -16,6 +16,8 @@ package io.opentracing.contrib.spring.rabbitmq.customizing;
 import io.opentracing.Span;
 import io.opentracing.contrib.spring.rabbitmq.RabbitMqSpanDecorator;
 import io.opentracing.contrib.spring.rabbitmq.RabbitMqTracingTags;
+import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
+import io.opentracing.tag.Tags;
 
 import org.springframework.amqp.core.MessageProperties;
 
@@ -36,5 +38,13 @@ public class CustomizedRabbitMqSpanDecorator extends RabbitMqSpanDecorator {
   protected void onReceive(MessageProperties messageProperties, Span span) {
     super.onReceive(messageProperties, span);
     span.setOperationName(OVERRIDEN_OPERATION_NAME_FOR_RECEIVING);
+  }
+
+  @Override
+  protected void onSendReply(MessageProperties replyMessageProperties, String replyExchange, String replyRoutingKey, Span span) {
+    String errorMessageToAdd = (String) replyMessageProperties.getHeaders().get(TestMessageListener.HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER);
+    if (errorMessageToAdd != null) {
+      Tags.ERROR.set(span, true);
+    }
   }
 }

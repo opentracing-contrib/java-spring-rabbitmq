@@ -52,6 +52,7 @@ class RabbitMqSendTracingHelper {
     if (routingKey != null && routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
       // don't create new span for response messages when sending reply to AMQP requests that expected response message
       Message convertedMessage = convertMessageIfNecessary(message);
+      spanDecorator.onSendReply(convertedMessage.getMessageProperties(), exchange, routingKey, tracer.activeSpan());
       return proceedCallback.apply(convertedMessage);
     }
     Message messageWithTracingHeaders = doBefore(exchange, routingKey, message);

@@ -14,13 +14,17 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
+import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
 import io.opentracing.contrib.spring.rabbitmq.customizing.CustomizedRabbitMqSpanDecorator;
 import io.opentracing.contrib.spring.rabbitmq.util.FinishedSpansHelper;
 import io.opentracing.mock.MockSpan;
 
 import org.junit.Test;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -54,6 +58,22 @@ public class RabbitMqTracingAutoConfigurationCustomizationItTest extends BaseRab
 
     assertSpanRabbitTags(receiveSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER);
     assertThat(receiveSpan.operationName(), equalTo(CustomizedRabbitMqSpanDecorator.OVERRIDEN_OPERATION_NAME_FOR_RECEIVING));
+  }
+
+  @Test
+  public void givenCustomSpanDecorator_onSendReply_addsErrorTagToReceiveSpanBasedOnReplyMessageCustomResponseHeader() {
+    final String message = "hello world message!";
+    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
+    requestMessage.getMessageProperties()
+        .setHeader(TestMessageListener.HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE, true);
+    Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
+
+    assertThat(response, notNullValue());
+
+    FinishedSpansHelper spans = awaitFinishedSpans();
+    assertEquals(2, spans.getAllSpans().size());
+
+    assertErrorTag(spans.getReceiveSpan()); // added by custom RabbitMqSpanDecorator
   }
 
   @Configuration
