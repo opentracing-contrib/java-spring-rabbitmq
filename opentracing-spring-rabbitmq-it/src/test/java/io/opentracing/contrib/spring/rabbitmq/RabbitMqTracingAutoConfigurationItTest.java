@@ -13,12 +13,10 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import io.opentracing.Span;
-import io.opentracing.mock.MockSpan;
-
 import org.junit.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -28,14 +26,14 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class}
+    classes = {RabbitMqTracingAutoConfigurationItTest.TestConfig.class}
 )
-public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTest {
+public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingItTest {
 
   @Autowired private RabbitTemplate rabbitTemplate;
 
   @Test
-  public void testSendAndReceiveRabbitMessage() {
+  public void testSendAndReceiveRabbitMessage_whenUsingRabbitMqTracingAutoConfiguration() {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
 
@@ -43,24 +41,13 @@ public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTe
     assertConsumerAndProducerSpans(parentSpanId);
   }
 
-  @Test
-  public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {
-    Span span = tracer.buildSpan("parentOperation").start();
-    tracer.scopeManager().activate(span, false);
-    MockSpan.MockContext context = (MockSpan.MockContext) tracer.activeSpan().context();
-    long parentSpanId = context.spanId();
-
-    final String message = "hello world message!";
-    rabbitTemplate.convertAndSend("myExchange", "#", message);
-
-    assertConsumerAndProducerSpans(parentSpanId);
-  }
-
   @Configuration
   @Import({
       RabbitWithRabbitTemplateConfig.class,
       TracerConfig.class,
-      RabbitMqTracingManualConfig.class
+  })
+  @ImportAutoConfiguration(classes = {
+      RabbitMqTracingAutoConfiguration.class // using auto-configuration for tracing RabbitMq
   })
   static class TestConfig {
   }

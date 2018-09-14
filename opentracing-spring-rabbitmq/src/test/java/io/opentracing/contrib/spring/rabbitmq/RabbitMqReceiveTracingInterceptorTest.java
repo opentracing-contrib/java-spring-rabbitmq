@@ -32,11 +32,12 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  * @author Gilles Robert
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = MockTracingConfiguration.class)
+    classes = {MockTracingConfiguration.class, RabbitMqSpanDecoratorConfiguration.class})
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqReceiveTracingInterceptorTest {
 
   @Autowired private MockTracer mockTracer;
+  @Autowired private RabbitMqSpanDecorator spanDecorator;
 
   @Before
   public void setup() {
@@ -48,7 +49,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
     // given
     mockTracer.buildSpan("parent").startActive(false);
     RabbitMqReceiveTracingInterceptor interceptor =
-        new RabbitMqReceiveTracingInterceptor(mockTracer);
+        new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestMethodInvocationWithContext();
 
     // when
@@ -61,7 +62,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
   public void testInvoke_whenContextAndNoActiveSpan() throws Throwable {
     // given
     RabbitMqReceiveTracingInterceptor interceptor =
-        new RabbitMqReceiveTracingInterceptor(mockTracer);
+        new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestMethodInvocation();
 
     // when
@@ -74,7 +75,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
   public void testInvoke_whenNoContext() throws Throwable {
     // given
     RabbitMqReceiveTracingInterceptor interceptor =
-        new RabbitMqReceiveTracingInterceptor(mockTracer);
+        new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestMethodInvocation();
 
     // when
@@ -87,7 +88,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
   public void testInvoke_whenException() throws Throwable {
     // given
     RabbitMqReceiveTracingInterceptor interceptor =
-        new RabbitMqReceiveTracingInterceptor(mockTracer);
+        new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestExceptionMethodInvocation();
 
     // when
@@ -100,7 +101,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
   public void testInvoke_whenExceptionAndChildPresent() throws Throwable {
     // given
     RabbitMqReceiveTracingInterceptor interceptor =
-        new RabbitMqReceiveTracingInterceptor(mockTracer);
+        new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestExceptionMethodInvocationWithContext();
 
     // when

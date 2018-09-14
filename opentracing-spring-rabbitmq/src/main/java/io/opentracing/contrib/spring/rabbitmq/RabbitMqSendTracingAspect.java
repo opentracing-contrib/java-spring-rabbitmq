@@ -17,6 +17,7 @@ import io.opentracing.Scope;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 
+import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -28,19 +29,20 @@ import org.springframework.amqp.support.converter.MessageConverter;
  * @author Gilles Robert
  */
 @Aspect
+@AllArgsConstructor
 class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
   private final MessageConverter messageConverter;
-
-  RabbitMqSendTracingAspect(Tracer tracer, MessageConverter messageConverter) {
-    this.tracer = tracer;
-    this.messageConverter = messageConverter;
-  }
+  private final RabbitMqSpanDecorator spanDecorator;
 
   // CHECKSTYLE:OFF
+
+  /**
+   * @see org.springframework.amqp.core.AmqpTemplate#convertAndSend(String, String, Object)
+   */
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.convertAndSend(..)) && args(exchange,"
-            + "routingKey, message)", argNames = "pjp,exchange,routingKey,message"
+      + "routingKey, message)", argNames = "pjp,exchange,routingKey,message"
   )
   public Object traceRabbitSend(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
@@ -57,7 +59,6 @@ class RabbitMqSendTracingAspect {
         Format.Builtin.TEXT_MAP,
         new RabbitMqInjectAdapter(messageProperties));
 
-    RabbitMqSpanDecorator spanDecorator = new RabbitMqSpanDecorator();
     spanDecorator.onSend(messageProperties, exchange, routingKey, scope.span());
 
     args[2] = convertedMessage;

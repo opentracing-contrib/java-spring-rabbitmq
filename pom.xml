@@ -64,6 +64,7 @@
         <version.org.springframework.cloud>Dalston.SR4</version.org.springframework.cloud>
         <version.io.arivera.oss.embedded-rabbitmq>1.2.3</version.io.arivera.oss.embedded-rabbitmq>
         <version.org.awaitility-awaitility>3.0.0</version.org.awaitility-awaitility>
+        <lombok.version>1.16.18</lombok.version>
 
         <!-- plugins -->
         <version.maven-deploy-plugin>2.8.2</version.maven-deploy-plugin>
@@ -107,6 +108,11 @@
                 <version>${version.org.springframework.boot}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

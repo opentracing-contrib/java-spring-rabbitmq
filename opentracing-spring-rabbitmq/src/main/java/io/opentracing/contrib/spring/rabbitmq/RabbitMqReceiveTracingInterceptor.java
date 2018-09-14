@@ -17,6 +17,7 @@ import io.opentracing.Scope;
 import io.opentracing.Tracer;
 
 import java.util.Optional;
+import lombok.AllArgsConstructor;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.amqp.core.Message;
@@ -27,13 +28,11 @@ import org.springframework.aop.BeforeAdvice;
 /**
  * @author Gilles Robert
  */
+@AllArgsConstructor
 class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvice, BeforeAdvice {
 
   private final Tracer tracer;
-
-  RabbitMqReceiveTracingInterceptor(Tracer tracer) {
-    this.tracer = tracer;
-  }
+  private final RabbitMqSpanDecorator spanDecorator;
 
   @Override
   public Object invoke(MethodInvocation methodInvocation) throws Throwable {
@@ -41,7 +40,6 @@ class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvic
     MessageProperties messageProperties = message.getMessageProperties();
 
     Optional<Scope> child = RabbitMqTracingUtils.buildReceiveSpan(messageProperties, tracer);
-    RabbitMqSpanDecorator spanDecorator = new RabbitMqSpanDecorator();
     child.ifPresent(scope -> spanDecorator.onReceive(messageProperties, scope.span()));
 
     // CHECKSTYLE:OFF

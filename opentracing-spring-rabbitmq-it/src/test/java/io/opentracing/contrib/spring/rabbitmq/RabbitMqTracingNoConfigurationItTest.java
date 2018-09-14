@@ -13,9 +13,6 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import io.opentracing.Span;
-import io.opentracing.mock.MockSpan;
-
 import org.junit.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,39 +25,24 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    classes = {RabbitMqSendAndReceiveTracingItTest.TestConfig.class}
+    classes = {RabbitMqTracingNoConfigurationItTest.TestConfig.class}
 )
-public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTest {
+public class RabbitMqTracingNoConfigurationItTest extends BaseRabbitMqTracingItTest {
 
   @Autowired private RabbitTemplate rabbitTemplate;
 
   @Test
-  public void testSendAndReceiveRabbitMessage() {
+  public void testSendAndReceiveRabbitMessage_whenNoRabbitMqTracingConfig() {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
-
-    long parentSpanId = 0;
-    assertConsumerAndProducerSpans(parentSpanId);
-  }
-
-  @Test
-  public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {
-    Span span = tracer.buildSpan("parentOperation").start();
-    tracer.scopeManager().activate(span, false);
-    MockSpan.MockContext context = (MockSpan.MockContext) tracer.activeSpan().context();
-    long parentSpanId = context.spanId();
-
-    final String message = "hello world message!";
-    rabbitTemplate.convertAndSend("myExchange", "#", message);
-
-    assertConsumerAndProducerSpans(parentSpanId);
+    checkNoSpans();
   }
 
   @Configuration
   @Import({
       RabbitWithRabbitTemplateConfig.class,
       TracerConfig.class,
-      RabbitMqTracingManualConfig.class
+      // RabbitMqTracingManualConfig.class - using neither manual nor auto-configuration for tracing RabbitMq
   })
   static class TestConfig {
   }
