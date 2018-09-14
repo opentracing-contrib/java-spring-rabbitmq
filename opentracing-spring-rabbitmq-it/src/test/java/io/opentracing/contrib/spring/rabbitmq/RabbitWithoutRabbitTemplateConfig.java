@@ -13,18 +13,30 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import com.rabbitmq.client.Channel;
+import io.opentracing.contrib.spring.rabbitmq.RabbitTemplateProviderConfig.RabbitTemplateProvider;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Address;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
+import org.springframework.amqp.rabbit.core.ChannelAwareMessageListener;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@ImportAutoConfiguration(RabbitTemplateProviderConfig.class)
 public class RabbitWithoutRabbitTemplateConfig {
   public static final int PORT = 5672;
 
@@ -65,17 +77,66 @@ public class RabbitWithoutRabbitTemplateConfig {
 
   @Bean
   public SimpleMessageListenerContainer messageListenerContainer(
+      TestMessageListener messageListener,
       CachingConnectionFactory cachingConnectionFactory, Queue queue) {
     SimpleMessageListenerContainer container =
         new SimpleMessageListenerContainer(cachingConnectionFactory);
     container.setQueues(queue);
-    container.setMessageListener(new MessageListenerAdapter(new MessageListenerTest()));
+    container.setMessageListener(messageListener);
 
     return container;
   }
 
-  class MessageListenerTest {
+  @Bean
+  public TestMessageListener testMessageListener(RabbitTemplateProvider rabbitTemplateProvider) {
+    return new TestMessageListener(rabbitTemplateProvider);
+  }
 
-    public void handleMessage(Object message) {}
+  @Slf4j
+  @AllArgsConstructor
+  public static class TestMessageListener implements ChannelAwareMessageListener {
+    public static final String REPLY_MSG_PREFIX = "Reply: ";
+    public static final String HEADER_SLEEP_MILLIS = "sleep.millis";
+    public static final String HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE = "add.custom.error";
+    public static final String HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER = "custom.error";
+    private final RabbitTemplateProvider rabbitTemplateProvider;
+
+    @Override
+    public void onMessage(Message message, Channel channel) {
+      log.warn("Got message: {} from channel {}", message, channel);
+      sleepIfRequested((Long) message.getMessageProperties().getHeaders().get(HEADER_SLEEP_MILLIS));
+      sendReplyIfRequested(message);
+    }
+
+    private void sleepIfRequested(Long sleepMillis) {
+      if (sleepMillis != null) {
+        try {
+          log.info("Sleeping {}ms as requested", sleepMillis);
+          Thread.sleep(sleepMillis);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+      }
+    }
+
+    private void sendReplyIfRequested(Message message) {
+      MessageProperties messageProperties = message.getMessageProperties();
+      String replyToProperty = messageProperties.getReplyTo();
+      if (replyToProperty != null) {
+        RabbitTemplate rabbitTemplate = rabbitTemplateProvider.getRabbitTemplate();
+        Address replyTo = new Address(replyToProperty);
+        String replyMsg = REPLY_MSG_PREFIX + new String(message.getBody(), UTF_8);
+        Message replyMessage = rabbitTemplate.getMessageConverter().toMessage(replyMsg, null);
+
+        Object addCustomResponseErrorMarkerHeader = messageProperties.getHeaders().get(HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE);
+        if (addCustomResponseErrorMarkerHeader != null) {
+          replyMessage.getMessageProperties().setHeader(HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER, "dummy error message");
+        }
+
+        rabbitTemplate.convertAndSend(replyTo.getExchangeName(), replyTo.getRoutingKey(), replyMessage);
+      }
+    }
+
   }
 }

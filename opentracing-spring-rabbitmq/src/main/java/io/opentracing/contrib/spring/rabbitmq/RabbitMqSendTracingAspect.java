@@ -13,16 +13,15 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
-import io.opentracing.Scope;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
-
 import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.amqp.core.Message;
-import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.amqp.support.converter.MessageConverter;
 
 /**
@@ -47,38 +46,58 @@ class RabbitMqSendTracingAspect {
   public Object traceRabbitSend(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
-    final Object[] args = pjp.getArgs();
-
-    Message convertedMessage = convertMessageIfNecessary(message);
-
-    final MessageProperties messageProperties = convertedMessage.getMessageProperties();
-
-    Scope scope = RabbitMqTracingUtils.buildSendSpan(tracer, messageProperties);
-    tracer.inject(
-        scope.span().context(),
-        Format.Builtin.TEXT_MAP,
-        new RabbitMqInjectAdapter(messageProperties));
-
-    spanDecorator.onSend(messageProperties, exchange, routingKey, scope.span());
-
-    args[2] = convertedMessage;
-
-    try {
-      return pjp.proceed(args);
-    } catch (Exception ex) {
-      spanDecorator.onError(ex, scope.span());
-      throw ex;
-    } finally {
-      scope.close();
-    }
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
   }
   // CHECKSTYLE:ON
 
-  private Message convertMessageIfNecessary(final Object object) {
-    if (object instanceof Message) {
-      return (Message) object;
-    }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // START: intercept public methods that eventually delegate to RabbitTemplate.doSendAndReceive                      //
+  // that can't be intercepted with AspectJ as it is protected
 
-    return messageConverter.toMessage(object, new MessageProperties());
+  /**
+   * @see org.springframework.amqp.rabbit.core.RabbitTemplate#sendAndReceive(String, String, Message, CorrelationData)
+   */
+  @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.sendAndReceive(..)) && args(exchange,"
+      + "routingKey, message, correlationData)", argNames = "pjp,exchange,routingKey,message,correlationData"
+  )
+  public Object traceRabbitSendAndReceive(
+      ProceedingJoinPoint pjp, String exchange, String routingKey, Message message, CorrelationData correlationData)
+      throws Throwable {
+    return createTracingHelper()
+        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
   }
+
+  /**
+   * @see org.springframework.amqp.rabbit.core.RabbitTemplate#convertSendAndReceive(String, String, Object, MessagePostProcessor, CorrelationData)
+   */
+  @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.convertSendAndReceive(..)) && args(exchange,"
+      + "routingKey, message, messagePostProcessor, correlationData)", argNames = "pjp,exchange,routingKey,message,messagePostProcessor,correlationData"
+  )
+  public Object traceRabbitSendAndReceive(
+      ProceedingJoinPoint pjp, String exchange, String routingKey, Object message, MessagePostProcessor messagePostProcessor, CorrelationData correlationData)
+      throws Throwable {
+    return createTracingHelper()
+        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
+  }
+
+  // END: intercept public methods that eventually delegate to RabbitTemplate.doSendAndReceive                        //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  private RabbitMqSendTracingHelper createTracingHelper() {
+    return new RabbitMqSendTracingHelper(tracer, messageConverter, spanDecorator);
+  }
+
+  private Object proceedReplacingMessage(ProceedingJoinPoint pjp, Message convertedMessage, int messageArgumentIndex)
+      throws Throwable {
+    final Object[] args = pjp.getArgs();
+    args[messageArgumentIndex] = convertedMessage;
+    return pjp.proceed(args);
+  }
+
 }

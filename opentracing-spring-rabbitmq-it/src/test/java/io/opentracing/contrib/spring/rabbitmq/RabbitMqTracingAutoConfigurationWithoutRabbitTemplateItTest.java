@@ -19,16 +19,23 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
+import io.opentracing.contrib.spring.rabbitmq.RabbitTemplateProviderConfig.RabbitTemplateProvider;
 import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
+import io.opentracing.contrib.spring.rabbitmq.customizing.TracingRabbitTemplate;
 import io.opentracing.mock.MockSpan;
+import io.opentracing.mock.MockTracer;
 import java.util.List;
 import org.junit.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
@@ -37,46 +44,53 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    classes = {RabbitMqTracingAutoConfigurationItTest.TestConfig.class}
+    classes = {RabbitMqTracingAutoConfigurationWithoutRabbitTemplateItTest.TestConfig.class}
 )
-public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingItTest {
+public class RabbitMqTracingAutoConfigurationWithoutRabbitTemplateItTest extends BaseRabbitMqTracingItTest {
+  private static final String ROUTING_KEY = "#";
+  private static final String EXCHANGE = "myExchange";
+  private static final String MESSAGE = "hello world message!";
 
-  @Autowired private RabbitTemplate rabbitTemplate;
+
+  @Autowired private RabbitTemplateProvider rabbitTemplateProvider;
 
   @Test
-  public void givenAutoConfiguredRabbitTemplate_convertAndSend_shouldBeTraced() {
-    final String message = "hello world message!";
-    rabbitTemplate.convertAndSend("myExchange", "#", message);
+  public void givenCustomRabbitTemplateImplementationWithTracingSupport_convertAndSend_shouldBeTraced() {
+    getRabbitTemplate().convertAndSend(EXCHANGE, ROUTING_KEY, MESSAGE, (CorrelationData) null);
 
     assertConsumerAndProducerSpans(0);
   }
 
-  @Test
-  public void givenAutoConfiguredRabbitTemplate_sendAndReceive_shouldBeTraced() {
-    final String message = "hello world message!";
-    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
-    Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
-
-    assertConsumerAndProducerSpans(0);
-    assertThat(new String(response.getBody(), UTF_8), equalTo(TestMessageListener.REPLY_MSG_PREFIX + message));
+  private RabbitTemplate getRabbitTemplate() {
+    return rabbitTemplateProvider.getRabbitTemplate();
   }
 
   @Test
-  public void givenAutoConfiguredRabbitTemplate_convertSendAndReceive_shouldBeTraced() {
-    final String message = "hello world message!";
+  public void givenCustomRabbitTemplateImplementationWithTracingSupport_sendAndReceive_shouldBeTraced() {
+    RabbitTemplate rabbitTemplate = getRabbitTemplate();
+    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(MESSAGE, null);
+    Message response = rabbitTemplate.sendAndReceive(EXCHANGE, ROUTING_KEY, requestMessage, null);
+
+    assertConsumerAndProducerSpans(0);
+    assertThat(new String(response.getBody(), UTF_8), equalTo(TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
+  }
+
+  @Test
+  public void givenCustomRabbitTemplateImplementationWithTracingSupport_convertSendAndReceive_shouldBeTraced() {
     MessagePostProcessor messagePostProcessor = msg -> msg;
-    Object response = rabbitTemplate.convertSendAndReceive("myExchange", "#", message, messagePostProcessor, null);
+    Object response = getRabbitTemplate().convertSendAndReceive(EXCHANGE, ROUTING_KEY, MESSAGE, messagePostProcessor, null);
 
     assertConsumerAndProducerSpans(0);
-    assertThat(response.toString(), equalTo(TestMessageListener.REPLY_MSG_PREFIX + message));
+    assertThat(response.toString(), equalTo(TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
   }
 
   @Test
   public void givenMessageThatIsProcessedLongerThanRabbitTemplateTimeout_sendAndReceive_shouldProduceSpanWithError() {
     final String message = "hello world message!";
+    RabbitTemplate rabbitTemplate = getRabbitTemplate();
     Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
     requestMessage.getMessageProperties().setHeader(TestMessageListener.HEADER_SLEEP_MILLIS, RabbitWithRabbitTemplateConfig.RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS + 500);
-    Message response = rabbitTemplate.sendAndReceive("myExchange", "#", requestMessage, null);
+    Message response = rabbitTemplate.sendAndReceive(EXCHANGE, ROUTING_KEY, requestMessage, null);
 
     // response is null in case of timeout
     assertThat(response, nullValue());
@@ -92,14 +106,28 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
     assertRabbitConsumerSpan(receiveSpan);
   }
 
+  // TODO test timeout
+
   @Configuration
   @Import({
-      RabbitWithRabbitTemplateConfig.class,
+      RabbitWithoutRabbitTemplateConfig.class,
       TracerConfig.class,
   })
   @ImportAutoConfiguration(classes = {
       RabbitMqTracingAutoConfiguration.class // using auto-configuration for tracing RabbitMq
   })
   static class TestConfig {
+    @Bean
+    RabbitTemplateProvider rabbitTemplateProvider(
+        RabbitConnectionFactoryBean rabbitConnectionFactoryBean,
+        RabbitMqSpanDecorator spanDecorator,
+        MockTracer tracer)
+        throws Exception {
+      final CachingConnectionFactory cachingConnectionFactory =
+          new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
+      TracingRabbitTemplate rabbitTemplate = new TracingRabbitTemplate(cachingConnectionFactory, tracer, spanDecorator);
+      RabbitWithRabbitTemplateConfig.configureRabbitTemplate(rabbitTemplate);
+      return new RabbitTemplateProvider(rabbitTemplate);
+    }
   }
 }
