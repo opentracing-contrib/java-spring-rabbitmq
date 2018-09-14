@@ -16,6 +16,7 @@ package io.opentracing.contrib.spring.rabbitmq;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitTemplateProviderConfig {
 
   @Bean
+  @ConditionalOnMissingBean(RabbitTemplateProvider.class)
   public RabbitTemplateProvider rabbitTemplateProvider(RabbitTemplate rabbitTemplate) {
     return new RabbitTemplateProvider(rabbitTemplate);
   }

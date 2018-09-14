@@ -28,7 +28,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.util.ReflectionUtils;
 
 @RequiredArgsConstructor
-class RabbitMqSendTracingHelper {
+public class RabbitMqSendTracingHelper {
   private static final Field FIELD_REPLY_TIMEOUT = ReflectionUtils.findField(RabbitTemplate.class, "replyTimeout");
   static {
     FIELD_REPLY_TIMEOUT.setAccessible(true);
@@ -41,13 +41,13 @@ class RabbitMqSendTracingHelper {
   private boolean nullResponseMeansError;
   private RabbitTemplate rabbitTemplate;
 
-  RabbitMqSendTracingHelper nullResponseMeansTimeout(RabbitTemplate rabbitTemplate) {
+  public RabbitMqSendTracingHelper nullResponseMeansTimeout(RabbitTemplate rabbitTemplate) {
     this.nullResponseMeansError = true;
     this.rabbitTemplate = rabbitTemplate;
     return this;
   }
 
-  Object doWithTracingHeadersMessage(String exchange, String routingKey, Object message, ProceedFunction proceedCallback)
+  public <T> T doWithTracingHeadersMessage(String exchange, String routingKey, Object message, ProceedFunction<T> proceedCallback)
       throws Throwable {
     if (routingKey != null && routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
       // don't create new span for response messages when sending reply to AMQP requests that expected response message
@@ -57,7 +57,7 @@ class RabbitMqSendTracingHelper {
     }
     Message messageWithTracingHeaders = doBefore(exchange, routingKey, message);
     try {
-      Object resp = proceedCallback.apply(messageWithTracingHeaders);
+      T resp = proceedCallback.apply(messageWithTracingHeaders);
       if (resp == null && nullResponseMeansError) {
         Span span = scope.span();
         spanDecorator.onError(null, span);
@@ -100,8 +100,8 @@ class RabbitMqSendTracingHelper {
     return messageConverter.toMessage(object, new MessageProperties());
   }
 
-  public interface ProceedFunction {
-    Object apply(Message t) throws Throwable;
+  public interface ProceedFunction<T> {
+    T apply(Message t) throws Throwable;
   }
 
 }
