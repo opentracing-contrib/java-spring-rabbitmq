@@ -14,13 +14,13 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Tracer;
-
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
@@ -35,6 +35,7 @@ import org.springframework.util.Assert;
 @Configuration
 @ConditionalOnClass({Message.class, RabbitTemplate.class})
 @ConditionalOnBean({Tracer.class})
+@ConditionalOnProperty(name = "opentracing.spring.rabbitmq.enabled", havingValue = "true", matchIfMissing = true)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class RabbitMqTracingAutoConfiguration {
 
