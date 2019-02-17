@@ -23,16 +23,16 @@ import org.springframework.amqp.core.MessageProperties;
 /**
  * @author Gilles Robert
  */
-class RabbitMqSpanDecorator {
+public class RabbitMqSpanDecorator {
 
-  void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
+  public void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
     Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
     RabbitMqTracingTags.EXCHANGE.set(span, exchange);
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
     RabbitMqTracingTags.ROUTING_KEY.set(span, routingKey);
   }
 
-  void onReceive(MessageProperties messageProperties, Span span) {
+  public void onReceive(MessageProperties messageProperties, Span span) {
     Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
     RabbitMqTracingTags.EXCHANGE.set(span, messageProperties.getReceivedExchange());
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
@@ -40,7 +40,14 @@ class RabbitMqSpanDecorator {
     RabbitMqTracingTags.CONSUMER_QUEUE.set(span, messageProperties.getConsumerQueue());
   }
 
-  void onError(Exception ex, Span span) {
+  /**
+   * Note, new span isn't created for reply messages.
+   * This extension point allows for example marking AMQP message consumer span with error for example based custom headers
+   */
+  public void onSendReply(MessageProperties replyMessageProperties, String replyExchange, String replyRoutingKey, Span span) {
+  }
+
+  public void onError(Exception ex, Span span) {
     Map<String, Object> exceptionLogs = new LinkedHashMap<>(2);
     exceptionLogs.put("event", Tags.ERROR.getKey());
     exceptionLogs.put("error.object", ex);

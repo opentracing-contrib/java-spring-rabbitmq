@@ -14,43 +14,26 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Tracer;
-import org.springframework.amqp.core.Message;
+
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.util.Assert;
 
-/**
- * Auto-configuration for RabbitMq tracing.
- *
- * @author Gilles Robert
- */
 @Configuration
-@ConditionalOnClass({Message.class, RabbitTemplate.class})
-@ConditionalOnBean({Tracer.class})
-@ConditionalOnProperty(name = "opentracing.spring.rabbitmq.enabled", havingValue = "true", matchIfMissing = true)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-public class RabbitMqTracingAutoConfiguration {
+public class RabbitMqTracingManualConfig {
 
   @Autowired @Lazy private Tracer tracer;
 
   @Bean
-  /**
-   * If RabbitTemplate bean isn't defined, tracing outgoing AMQP messages isn't done automatically,
-   * but incoming AMQP messages are still traced automatically via {@link #rabbitMqBeanPostProcessor(RabbitMqReceiveTracingInterceptor)}
-   */
-  @ConditionalOnBean(RabbitTemplate.class)
-  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(
-      RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
+  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
     Assert.notNull(
-        rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
+        rabbitTemplate.getMessageConverter(),
+        "RabbitTemplate has no message converter configured");
     return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getMessageConverter(), spanDecorator);
   }
 
@@ -60,14 +43,13 @@ public class RabbitMqTracingAutoConfiguration {
   }
 
   @Bean
-  public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(RabbitMqReceiveTracingInterceptor interceptor) {
+  public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(
+      RabbitMqReceiveTracingInterceptor interceptor) {
     return new RabbitMqBeanPostProcessor(interceptor);
   }
 
   @Bean
-  @ConditionalOnMissingBean(RabbitMqSpanDecorator.class)
   public RabbitMqSpanDecorator rabbitMqSpanDecorator() {
     return new RabbitMqSpanDecorator();
   }
-
 }

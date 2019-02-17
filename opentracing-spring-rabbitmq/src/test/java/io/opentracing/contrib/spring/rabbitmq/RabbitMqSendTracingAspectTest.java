@@ -39,12 +39,13 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  * @author Gilles Robert
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = MockTracingConfiguration.class)
+    classes = {MockTracingConfiguration.class, RabbitMqSpanDecoratorConfiguration.class})
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqSendTracingAspectTest {
 
   private RabbitMqSendTracingAspect aspect;
   @Autowired private MockTracer mockTracer;
+  @Autowired private RabbitMqSpanDecorator spanDecorator;
   @Mock private ProceedingJoinPoint proceedingJoinPoint;
   @Mock private MessageConverter messageConverter;
 
@@ -65,7 +66,7 @@ public class RabbitMqSendTracingAspectTest {
 
     mockTracer.scopeManager().activate(span, false);
 
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
@@ -94,7 +95,7 @@ public class RabbitMqSendTracingAspectTest {
   @Test
   public void testTraceRabbitSend_whenNoConversionIsNeeded() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
@@ -118,7 +119,7 @@ public class RabbitMqSendTracingAspectTest {
   @Test(expected = RuntimeException.class)
   public void testTraceRabbitSend_whenException() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
