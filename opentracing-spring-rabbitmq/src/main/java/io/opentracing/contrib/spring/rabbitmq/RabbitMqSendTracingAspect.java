@@ -59,7 +59,6 @@ class RabbitMqSendTracingAspect {
         argNames = "pjp,routingKey,message,messagePostProcessor,correlationData")
   public Object traceRabbitSend(ProceedingJoinPoint pjp, String routingKey, Object message,
         MessagePostProcessor messagePostProcessor, CorrelationData correlationData) throws Throwable {
-    final Object[] args = pjp.getArgs();
     return createTracingHelper()
         .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
             proceedReplacingMessage(pjp, convertedMessage, 1));
