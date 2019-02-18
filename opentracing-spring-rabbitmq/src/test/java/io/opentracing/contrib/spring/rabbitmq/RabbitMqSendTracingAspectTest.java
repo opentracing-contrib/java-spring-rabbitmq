@@ -66,7 +66,7 @@ public class RabbitMqSendTracingAspectTest {
 
     mockTracer.scopeManager().activate(span, false);
 
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, "dummy-exchange", messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
@@ -95,7 +95,7 @@ public class RabbitMqSendTracingAspectTest {
   @Test
   public void testTraceRabbitSend_whenNoConversionIsNeeded() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, "dummy-exchange", messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
@@ -119,7 +119,7 @@ public class RabbitMqSendTracingAspectTest {
   @Test(expected = RuntimeException.class)
   public void testTraceRabbitSend_whenException() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, messageConverter, spanDecorator);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, "dummy-exchange", messageConverter, spanDecorator);
 
     String exchange = "opentracing.event.exchange";
     String routingKey = "io.opentracing.event.AnEvent";
