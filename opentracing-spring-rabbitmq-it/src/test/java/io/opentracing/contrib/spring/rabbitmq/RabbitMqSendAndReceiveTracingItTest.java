@@ -17,6 +17,8 @@ import io.opentracing.Span;
 import io.opentracing.mock.MockSpan;
 
 import org.junit.Test;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,12 +49,12 @@ public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTe
   @Test
   public void testSend_whenUsingRabbitTemplateExchangeMessagePostProcessorAndCorrelationData() {
     final String message = "hello world message!";
-    MessagePostProcessor messagePostProcessor = null;
-    rabbitTemplate.convertAndSend("#", (Object) message, messagePostProcessor, null);
+    rabbitTemplate.convertAndSend("#", (Object)message, m -> { return m;}, null);
 
     long parentSpanId = 0;
     assertConsumerAndProducerSpans(parentSpanId);
   }
+
 
   @Test
   public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {

@@ -37,6 +37,7 @@ public class RabbitWithRabbitTemplateConfig {
     final CachingConnectionFactory cachingConnectionFactory =
         new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
     RabbitTemplate rabbitTemplate = new RabbitTemplate(cachingConnectionFactory);
+    rabbitTemplate.setExchange("myExchange");
     return configureRabbitTemplate(rabbitTemplate);
   }
 
