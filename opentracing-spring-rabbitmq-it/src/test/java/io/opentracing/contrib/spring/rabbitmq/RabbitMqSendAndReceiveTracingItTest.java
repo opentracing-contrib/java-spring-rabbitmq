@@ -47,7 +47,8 @@ public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTe
   @Test
   public void testSend_whenUsingRabbitTemplateExchangeMessagePostProcessorAndCorrelationData() {
     final String message = "hello world message!";
-    rabbitTemplate.convertAndSend("#", (Object) message, (MessagePostProcessor) null, null);
+      MessagePostProcessor messagePostProcessor = null;
+      rabbitTemplate.convertAndSend("#", (Object) message, messagePostProcessor, null);
 
     long parentSpanId = 0;
     assertConsumerAndProducerSpans(parentSpanId);
