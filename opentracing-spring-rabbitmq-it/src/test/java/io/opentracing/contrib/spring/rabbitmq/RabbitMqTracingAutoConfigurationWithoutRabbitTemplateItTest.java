@@ -126,6 +126,7 @@ public class RabbitMqTracingAutoConfigurationWithoutRabbitTemplateItTest extends
       final CachingConnectionFactory cachingConnectionFactory =
           new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
       TracingRabbitTemplate rabbitTemplate = new TracingRabbitTemplate(cachingConnectionFactory, tracer, spanDecorator);
+      rabbitTemplate.setUseDirectReplyToContainer(false);
       RabbitWithRabbitTemplateConfig.configureRabbitTemplate(rabbitTemplate);
       return new RabbitTemplateProvider(rabbitTemplate);
     }

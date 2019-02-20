@@ -133,6 +133,7 @@ public class RabbitWithoutRabbitTemplateConfig {
         if (addCustomResponseErrorMarkerHeader != null) {
           replyMessage.getMessageProperties().setHeader(HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER, "dummy error message");
         }
+        replyMessage.getMessageProperties().setCorrelationId(messageProperties.getCorrelationId());
 
         rabbitTemplate.convertAndSend(replyTo.getExchangeName(), replyTo.getRoutingKey(), replyMessage);
       }
