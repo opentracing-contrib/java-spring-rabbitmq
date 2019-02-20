@@ -51,7 +51,7 @@ public class RabbitMqTracingAutoConfiguration {
       RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
     Assert.notNull(
         rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
-    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getMessageConverter(), spanDecorator);
+    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getMessageConverter(), spanDecorator);
   }
 
   @Bean

@@ -44,6 +44,16 @@ public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTe
   }
 
   @Test
+  public void testSend_whenUsingRabbitTemplateExchangeMessagePostProcessorAndCorrelationData() {
+    final String message = "hello world message!";
+    rabbitTemplate.convertAndSend("#", message, m -> m, null);
+
+    long parentSpanId = 0;
+    assertConsumerAndProducerSpans(parentSpanId);
+  }
+
+
+  @Test
   public void testSendAndReceiveRabbitMessage_whenParentSpanIsPresent() {
     Span span = tracer.buildSpan("parentOperation").start();
     tracer.scopeManager().activate(span, false);

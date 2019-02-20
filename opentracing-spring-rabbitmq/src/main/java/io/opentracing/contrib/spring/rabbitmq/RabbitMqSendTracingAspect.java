@@ -32,6 +32,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
 class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
+  private final String exchange;
   private final MessageConverter messageConverter;
   private final RabbitMqSpanDecorator spanDecorator;
 
@@ -49,6 +50,18 @@ class RabbitMqSendTracingAspect {
     return createTracingHelper()
         .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
             proceedReplacingMessage(pjp, convertedMessage, 2));
+  }
+
+  /**
+   * @see org.springframework.amqp.rabbit.core.RabbitTemplate#convertAndSend(String, Object, MessagePostProcessor, CorrelationData)
+   */
+  @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.convertAndSend(..)) && args(routingKey, message, messagePostProcessor, correlationData)",
+        argNames = "pjp,routingKey,message,messagePostProcessor,correlationData")
+  public Object traceRabbitSend(ProceedingJoinPoint pjp, String routingKey, Object message,
+        MessagePostProcessor messagePostProcessor, CorrelationData correlationData) throws Throwable {
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 1));
   }
   // CHECKSTYLE:ON
 
