@@ -35,11 +35,6 @@ class RabbitMqBeanPostProcessor implements BeanPostProcessor {
   @Override
   public Object postProcessBeforeInitialization(Object bean, String beanName)
       throws BeansException {
-    return bean;
-  }
-
-  @Override
-  public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
     if (bean instanceof SimpleRabbitListenerContainerFactory) {
       SimpleRabbitListenerContainerFactory factory = (SimpleRabbitListenerContainerFactory) bean;
       registerTracingInterceptor(factory);
@@ -47,6 +42,11 @@ class RabbitMqBeanPostProcessor implements BeanPostProcessor {
       SimpleMessageListenerContainer container = (SimpleMessageListenerContainer) bean;
       registerTracingInterceptor(container);
     }
+    return bean;
+  }
+
+  @Override
+  public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
     return bean;
   }
 
