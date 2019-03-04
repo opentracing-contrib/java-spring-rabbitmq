@@ -14,6 +14,7 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.tag.StringTag;
+import io.opentracing.tag.Tags;
 
 /**
  * @author Gilles Robert
@@ -25,8 +26,8 @@ public final class RabbitMqTracingTags {
   public static final StringTag ROUTING_KEY = new StringTag("routingkey");
   public static final StringTag CONSUMER_QUEUE = new StringTag("consumerqueue");
   public static final StringTag EXCHANGE = new StringTag("exchange");
-  public static final String SPAN_KIND_PRODUCER = RABBITMQ.getKey() + "-send";
-  public static final String SPAN_KIND_CONSUMER = RABBITMQ.getKey() + "-receive";
+  public static final String SPAN_KIND_PRODUCER = Tags.SPAN_KIND_PRODUCER;
+  public static final String SPAN_KIND_CONSUMER = Tags.SPAN_KIND_CONSUMER;
 
   private RabbitMqTracingTags() {}
 }
