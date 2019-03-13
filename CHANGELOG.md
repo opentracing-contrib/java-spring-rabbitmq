@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/2) - 2019-03-13
+
+### Code breaking
+- [17](https://github.com/opentracing-contrib/java-spring-rabbitmq/issues/17): Upgrade to spring boot 2.1+ [@sudr](https://github.com/sudr)
+
+### Improvements
+- [13](https://github.com/opentracing-contrib/java-spring-rabbitmq/issues/13): Support for DirectMessageListenerContainer. [@sudr](https://github.com/sudr)
+
 ## [0.1.1](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/1) - 2019-03-12
 
 ### Improvements
