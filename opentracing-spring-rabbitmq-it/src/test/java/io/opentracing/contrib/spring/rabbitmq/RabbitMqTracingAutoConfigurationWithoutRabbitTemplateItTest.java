@@ -29,9 +29,9 @@ import org.junit.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.support.CorrelationData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -126,6 +126,7 @@ public class RabbitMqTracingAutoConfigurationWithoutRabbitTemplateItTest extends
       final CachingConnectionFactory cachingConnectionFactory =
           new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
       TracingRabbitTemplate rabbitTemplate = new TracingRabbitTemplate(cachingConnectionFactory, tracer, spanDecorator);
+      rabbitTemplate.setUseDirectReplyToContainer(false);
       RabbitWithRabbitTemplateConfig.configureRabbitTemplate(rabbitTemplate);
       return new RabbitTemplateProvider(rabbitTemplate);
     }

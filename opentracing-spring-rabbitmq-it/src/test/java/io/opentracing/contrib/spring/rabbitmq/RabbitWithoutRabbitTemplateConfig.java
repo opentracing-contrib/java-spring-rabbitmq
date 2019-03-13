@@ -27,10 +27,10 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
-import org.springframework.amqp.rabbit.core.ChannelAwareMessageListener;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.api.ChannelAwareMessageListener;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -133,6 +133,7 @@ public class RabbitWithoutRabbitTemplateConfig {
         if (addCustomResponseErrorMarkerHeader != null) {
           replyMessage.getMessageProperties().setHeader(HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER, "dummy error message");
         }
+        replyMessage.getMessageProperties().setCorrelationId(messageProperties.getCorrelationId());
 
         rabbitTemplate.convertAndSend(replyTo.getExchangeName(), replyTo.getRoutingKey(), replyMessage);
       }
