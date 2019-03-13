@@ -4,6 +4,8 @@
 
 This repository provides OpenTracing instrumentation for RabbitMQ. It can be used with any OpenTracing compatible implementation.
 
+This release-0.1 branch is a **maintenance branch** to support Spring Boot 1.5.x
+
 ## Configuration
 
 > **Note**: make sure that an `io.opentracing.Tracer` bean is available. It is not provided by this library.
