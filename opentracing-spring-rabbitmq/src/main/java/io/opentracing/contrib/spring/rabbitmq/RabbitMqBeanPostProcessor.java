@@ -15,7 +15,12 @@ package io.opentracing.contrib.spring.rabbitmq;
 
 import java.lang.reflect.Field;
 import org.aopalliance.aop.Advice;
+
+import org.springframework.amqp.rabbit.config.AbstractRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.config.DirectRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.listener.AbstractMessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.DirectMessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -23,6 +28,7 @@ import org.springframework.util.ReflectionUtils;
 
 /**
  * @author Gilles Robert
+ * @author Sud Ramasamy
  */
 class RabbitMqBeanPostProcessor implements BeanPostProcessor {
 
@@ -41,6 +47,12 @@ class RabbitMqBeanPostProcessor implements BeanPostProcessor {
     } else if (bean instanceof SimpleMessageListenerContainer) {
       SimpleMessageListenerContainer container = (SimpleMessageListenerContainer) bean;
       registerTracingInterceptor(container);
+    } else if (bean instanceof DirectRabbitListenerContainerFactory) {
+      DirectRabbitListenerContainerFactory factory = (DirectRabbitListenerContainerFactory)bean;
+      registerTracingInterceptor(factory);
+    } else if (bean instanceof DirectMessageListenerContainer) {
+      DirectMessageListenerContainer container = (DirectMessageListenerContainer)bean;
+      registerTracingInterceptor(container);
     }
     return bean;
   }
@@ -50,15 +62,15 @@ class RabbitMqBeanPostProcessor implements BeanPostProcessor {
     return bean;
   }
 
-  private void registerTracingInterceptor(SimpleRabbitListenerContainerFactory factory) {
+  private void registerTracingInterceptor(AbstractRabbitListenerContainerFactory factory) {
     Advice[] chain = factory.getAdviceChain();
     Advice[] adviceChainWithTracing = getAdviceChainOrAddInterceptorToChain(chain);
     factory.setAdviceChain(adviceChainWithTracing);
   }
 
-  private void registerTracingInterceptor(SimpleMessageListenerContainer container) {
+  private void registerTracingInterceptor(AbstractMessageListenerContainer container) {
     Field adviceChainField =
-        ReflectionUtils.findField(SimpleMessageListenerContainer.class, "adviceChain");
+        ReflectionUtils.findField(AbstractMessageListenerContainer.class, "adviceChain");
     ReflectionUtils.makeAccessible(adviceChainField);
     Advice[] chain = (Advice[]) ReflectionUtils.getField(adviceChainField, container);
     Advice[] adviceChainWithTracing = getAdviceChainOrAddInterceptorToChain(chain);
