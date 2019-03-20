@@ -63,6 +63,18 @@ class RabbitMqSendTracingAspect {
         .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
             proceedReplacingMessage(pjp, convertedMessage, 1));
   }
+
+  /**
+   * @see org.springframework.amqp.rabbit.core.RabbitTemplate#convertAndSend(String, String, Object, MessagePostProcessor)
+   */
+  @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.convertAndSend(..)) && args(exchange, routingKey, message, messagePostProcessor)",
+      argNames = "pjp,exchange,routingKey,message,messagePostProcessor")
+  public Object traceRabbitSend(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message,
+                                MessagePostProcessor messagePostProcessor) throws Throwable {
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
+  }
   // CHECKSTYLE:ON
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

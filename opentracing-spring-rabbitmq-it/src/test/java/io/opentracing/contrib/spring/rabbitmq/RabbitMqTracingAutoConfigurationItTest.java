@@ -52,6 +52,15 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
   }
 
   @Test
+  public void givenAutoConfiguredRabbitTemplate_convertAndSend_withMessagePostProcessor_shouldBeTraced() {
+    final String message = "hello world message!";
+    MessagePostProcessor messagePostProcessor = msg -> msg;
+    rabbitTemplate.convertAndSend("myExchange", "#", message, messagePostProcessor);
+
+    assertConsumerAndProducerSpans(0);
+  }
+
+  @Test
   public void givenAutoConfiguredRabbitTemplate_sendAndReceive_shouldBeTraced() {
     final String message = "hello world message!";
     Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);

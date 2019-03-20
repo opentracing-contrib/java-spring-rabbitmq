@@ -13,9 +13,8 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.verify;
 
 import io.opentracing.Span;
@@ -80,7 +79,7 @@ public class RabbitMqSendTracingAspectTest {
     properties.setReceivedRoutingKey("routingKey");
     properties.setMessageId("messageId");
     Message message = new Message("".getBytes(), properties);
-    given(messageConverter.toMessage(anyObject(), any(MessageProperties.class)))
+    given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
     // when
@@ -88,7 +87,7 @@ public class RabbitMqSendTracingAspectTest {
 
     // then
     verify(proceedingJoinPoint).getArgs();
-    verify(messageConverter).toMessage(anyObject(), any(MessageProperties.class));
+    verify(messageConverter).toMessage(any(Object.class), any(MessageProperties.class));
     verify(proceedingJoinPoint).proceed(args);
   }
 
@@ -105,7 +104,7 @@ public class RabbitMqSendTracingAspectTest {
     Object[] args = new Object[] {exchange, routingKey, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
-    given(messageConverter.toMessage(anyObject(), any(MessageProperties.class)))
+    given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
     // when
@@ -129,7 +128,7 @@ public class RabbitMqSendTracingAspectTest {
     Object[] args = new Object[] {exchange, routingKey, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
-    given(messageConverter.toMessage(anyObject(), any(MessageProperties.class)))
+    given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
     given(proceedingJoinPoint.proceed(args)).willThrow(new RuntimeException());
