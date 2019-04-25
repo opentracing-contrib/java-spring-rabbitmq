@@ -92,7 +92,7 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <version>${version.org.awaitility-awaitility}</version>
+            <version>${version.org.awaitility}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
