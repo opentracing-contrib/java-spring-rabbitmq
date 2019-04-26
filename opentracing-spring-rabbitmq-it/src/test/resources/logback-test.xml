@@ -11,7 +11,8 @@
   <!-- Log levels -->
   <!-- ========== -->
   <logger name="io.opentracing.contrib.spring.rabbitmq" level="info"/>
-  <logger name="io.arivera.oss" level="error"/>
+  <logger name="org.testcontainers" level="info"/>
+  <logger name="com.github.dockerjava" level="warn"/>
 
   <!-- ==== -->
   <!-- Root -->
