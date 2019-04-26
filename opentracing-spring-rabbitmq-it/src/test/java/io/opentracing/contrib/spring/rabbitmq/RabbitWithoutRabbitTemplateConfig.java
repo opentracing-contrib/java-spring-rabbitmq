@@ -26,6 +26,7 @@ import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -38,7 +39,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ImportAutoConfiguration(RabbitTemplateProviderConfig.class)
 public class RabbitWithoutRabbitTemplateConfig {
-  public static final int PORT = 5672;
 
   @Bean
   public Queue queue() {
@@ -46,13 +46,13 @@ public class RabbitWithoutRabbitTemplateConfig {
   }
 
   @Bean
-  public RabbitConnectionFactoryBean rabbitConnectionFactoryBean() throws Exception {
+  public RabbitConnectionFactoryBean rabbitConnectionFactoryBean() {
     RabbitConnectionFactoryBean rabbitConnectionFactoryBean = new RabbitConnectionFactoryBean();
     rabbitConnectionFactoryBean.setUsername("guest");
     rabbitConnectionFactoryBean.setPassword("guest");
-    rabbitConnectionFactoryBean.setHost("localhost");
+    rabbitConnectionFactoryBean.setHost(System.getProperty("spring.rabbitmq.host"));
     rabbitConnectionFactoryBean.setVirtualHost("/");
-    rabbitConnectionFactoryBean.setPort(PORT);
+    rabbitConnectionFactoryBean.setPort(Integer.valueOf(System.getProperty("spring.rabbitmq.port")));
     rabbitConnectionFactoryBean.afterPropertiesSet();
     return rabbitConnectionFactoryBean;
   }
@@ -64,10 +64,10 @@ public class RabbitWithoutRabbitTemplateConfig {
   }
 
   @Bean
-  public RabbitAdmin rabbitAdmin(Queue queue, CachingConnectionFactory cachingConnectionFactory) {
+  public RabbitAdmin rabbitAdmin(Queue queue, ConnectionFactory connectionFactory) {
     final TopicExchange exchange = new TopicExchange("myExchange", true, false);
 
-    final RabbitAdmin admin = new RabbitAdmin(cachingConnectionFactory);
+    final RabbitAdmin admin = new RabbitAdmin(connectionFactory);
     admin.declareQueue(queue);
     admin.declareExchange(exchange);
     admin.declareBinding(BindingBuilder.bind(queue).to(exchange).with("#"));
@@ -77,10 +77,9 @@ public class RabbitWithoutRabbitTemplateConfig {
 
   @Bean
   public SimpleMessageListenerContainer messageListenerContainer(
-      TestMessageListener messageListener,
-      CachingConnectionFactory cachingConnectionFactory, Queue queue) {
+      TestMessageListener messageListener, ConnectionFactory connectionFactory, Queue queue) {
     SimpleMessageListenerContainer container =
-        new SimpleMessageListenerContainer(cachingConnectionFactory);
+        new SimpleMessageListenerContainer(connectionFactory);
     container.setQueues(queue);
     container.setMessageListener(messageListener);
 
@@ -95,9 +94,10 @@ public class RabbitWithoutRabbitTemplateConfig {
   @Slf4j
   @AllArgsConstructor
   public static class TestMessageListener implements ChannelAwareMessageListener {
-    public static final String REPLY_MSG_PREFIX = "Reply: ";
-    public static final String HEADER_SLEEP_MILLIS = "sleep.millis";
-    public static final String HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE = "add.custom.error";
+
+    static final String REPLY_MSG_PREFIX = "Reply: ";
+    static final String HEADER_SLEEP_MILLIS = "sleep.millis";
+    static final String HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE = "add.custom.error";
     public static final String HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER = "custom.error";
     private final RabbitTemplateProvider rabbitTemplateProvider;
 

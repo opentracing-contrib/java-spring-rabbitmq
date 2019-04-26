@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Import;
 @Import(RabbitWithoutRabbitTemplateConfig.class)
 public class RabbitWithRabbitTemplateConfig {
 
-  public static final long RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
+  static final long RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
 
   @Bean
   public RabbitTemplate rabbitTemplate(RabbitConnectionFactoryBean rabbitConnectionFactoryBean)

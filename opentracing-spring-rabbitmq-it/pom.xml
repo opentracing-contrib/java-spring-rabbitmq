@@ -28,18 +28,6 @@
         <main.basedir>${project.basedir}/..</main.basedir>
     </properties>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${version.org.springframework.cloud}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>io.opentracing.contrib</groupId>
@@ -84,9 +72,9 @@
             <version>${version.io.opentracing}</version>
         </dependency>
         <dependency>
-            <groupId>io.arivera.oss</groupId>
-            <artifactId>embedded-rabbitmq</artifactId>
-            <version>${version.io.arivera.oss.embedded-rabbitmq}</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${version.org.testcontainers}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
