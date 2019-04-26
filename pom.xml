@@ -58,24 +58,23 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.basedir>${project.basedir}</main.basedir>
 
-        <version.io.opentracing>0.31.0</version.io.opentracing>
-        <version.org.awaitility>3.0.0</version.org.awaitility>
+        <version.io.opentracing>0.32.0</version.io.opentracing>
+        <version.org.awaitility>3.1.6</version.org.awaitility>
         <version.org.springframework.boot>2.1.4.RELEASE</version.org.springframework.boot>
         <version.org.testcontainers>1.11.2</version.org.testcontainers>
-        <version.org.awaitility-awaitility>3.0.0</version.org.awaitility-awaitility>
         <lombok.version>1.16.18</lombok.version>
 
         <!-- plugins -->
         <version.maven-deploy-plugin>2.8.2</version.maven-deploy-plugin>
-        <version.maven-failsafe-plugin>2.20.1</version.maven-failsafe-plugin>
+        <version.maven-failsafe-plugin>2.22.1</version.maven-failsafe-plugin>
         <version.maven-license-plugin>3.0</version.maven-license-plugin>
         <version.maven-release-plugin>2.5.3</version.maven-release-plugin>
         <version.maven-source-plugin>3.0.1</version.maven-source-plugin>
-        <version.maven-surefire-plugin>2.20</version.maven-surefire-plugin>
-        <version.maven-javadoc-plugin>2.10.4</version.maven-javadoc-plugin>
-        <version.maven-checkstyle-plugin>2.17</version.maven-checkstyle-plugin>
-        <version.checkstyle>8.18</version.checkstyle>
-        <version.io.takari-maven>0.3.4</version.io.takari-maven>
+        <version.maven-surefire-plugin>2.22.1</version.maven-surefire-plugin>
+        <version.maven-javadoc-plugin>3.1.0</version.maven-javadoc-plugin>
+        <version.maven-checkstyle-plugin>3.0.0</version.maven-checkstyle-plugin>
+        <version.checkstyle>8.19</version.checkstyle>
+        <version.io.takari-maven>0.7.6</version.io.takari-maven>
         <version.io.zikin.centralsync-maven-plugin>0.1.0</version.io.zikin.centralsync-maven-plugin>
     </properties>
 
