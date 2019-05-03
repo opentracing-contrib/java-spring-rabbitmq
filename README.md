@@ -13,7 +13,32 @@ The 1.x.x and 2.x.x versions of this library is compatible with Spring Boot 2.1.
 
 > **Note**: make sure that an `io.opentracing.Tracer` bean is available. It is not provided by this library.
 
-### Spring Boot
+This library is embedded in [java-spring-cloud](https://github.com/opentracing-contrib/java-spring-cloud)
+
+### Usage with Jaeger tracer
+If you want to use [Jaeger](https://www.jaegertracing.io/) as tracer,
+you can benefit directly from it by importing [java-spring-jaeger](https://github.com/opentracing-contrib/java-spring-jaeger).
+
+```xml
+<dependency>
+  <groupId>io.opentracing.contrib</groupId>
+  <artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>
+</dependency>
+```
+
+### Usage with Zipkin tracer
+If you want to use [Zipkin](https://zipkin.io/) as tracer, 
+you can benefit directly from it by importing [java-spring-zipkin](https://github.com/opentracing-contrib/java-spring-zipkin).
+
+```xml
+<dependency>
+  <groupId>io.opentracing.contrib</groupId>
+  <artifactId>opentracing-spring-zipkin-cloud-starter</artifactId>
+</dependency>
+```
+
+### Standalone usage
+#### With Spring Boot
 Add the following starter dependency to your pom.xml:
 ```xml
 <dependency>
@@ -22,7 +47,7 @@ Add the following starter dependency to your pom.xml:
 </dependency>
 ```
 
-### Spring
+#### With Spring
 Add the following dependency to your pom.xml:
 ```xml
 <dependency>
