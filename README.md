@@ -6,7 +6,7 @@ This repository provides OpenTracing instrumentation for RabbitMQ. It can be use
 
 The 0.x.x version of this library is compatible with Spring Boot 1.5.x (see [release-0.1](https://github.com/opentracing-contrib/java-spring-rabbitmq/tree/release-0.1) branch)
 
-The 1.x.x version of this library is compatible with Spring Boot 2.1.x
+The 1.x.x and 2.x.x versions of this library is compatible with Spring Boot 2.1.x
 
 
 ## Configuration
