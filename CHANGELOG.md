@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.2](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/5) - 2019-05-02
+## [2.0.0](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/5) - 2019-05-02
 - [Dependencies upgrade](https://github.com/opentracing-contrib/java-spring-rabbitmq/pull/31): [@ask4gilles](https://github.com/ask4gilles)
 - [Bump SB version and use testcontainers for rabbitMQ IT tests](https://github.com/opentracing-contrib/java-spring-rabbitmq/pull/30): [@ask4gilles](https://github.com/ask4gilles)
 
