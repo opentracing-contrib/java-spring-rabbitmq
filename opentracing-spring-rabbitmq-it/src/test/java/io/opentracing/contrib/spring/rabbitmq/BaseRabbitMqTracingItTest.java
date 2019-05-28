@@ -20,7 +20,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
-import io.opentracing.contrib.spring.rabbitmq.testrule.TestRabbitServerResource;
 import io.opentracing.contrib.spring.rabbitmq.util.FinishedSpansHelper;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
@@ -32,11 +31,13 @@ import org.awaitility.Duration;
 import org.awaitility.core.ConditionTimeoutException;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 // Needed to destroy rabbit message listeners (created by RabbitWithoutRabbitTemplateConfig.messageListenerContainer)
@@ -45,8 +46,18 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 // and hence next test never sees that span when checking finished spans.
 @DirtiesContext
 public abstract class BaseRabbitMqTracingItTest {
-  @ClassRule // could remove this annotation to reuse locally running RabbitMq server to speed up tests
-  public static TestRabbitServerResource rabbitServer = new TestRabbitServerResource();
+
+  private static final GenericContainer RABBIT =
+      new GenericContainer("rabbitmq:3.7.14-alpine")
+          .withExposedPorts(5672)
+          .waitingFor(Wait.forListeningPort());
+
+  static {
+    RABBIT.start();
+
+    System.setProperty("spring.rabbitmq.host", RABBIT.getContainerIpAddress());
+    System.setProperty("spring.rabbitmq.port", String.valueOf(RABBIT.getMappedPort(5672)));
+  }
 
   @Autowired protected MockTracer tracer;
 

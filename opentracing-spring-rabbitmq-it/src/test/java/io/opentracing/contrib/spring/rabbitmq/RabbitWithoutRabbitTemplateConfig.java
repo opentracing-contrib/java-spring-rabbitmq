@@ -38,7 +38,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ImportAutoConfiguration(RabbitTemplateProviderConfig.class)
 public class RabbitWithoutRabbitTemplateConfig {
-  public static final int PORT = 5672;
 
   @Bean
   public Queue queue() {
@@ -50,9 +49,9 @@ public class RabbitWithoutRabbitTemplateConfig {
     RabbitConnectionFactoryBean rabbitConnectionFactoryBean = new RabbitConnectionFactoryBean();
     rabbitConnectionFactoryBean.setUsername("guest");
     rabbitConnectionFactoryBean.setPassword("guest");
-    rabbitConnectionFactoryBean.setHost("localhost");
+    rabbitConnectionFactoryBean.setHost(System.getProperty("spring.rabbitmq.host"));
     rabbitConnectionFactoryBean.setVirtualHost("/");
-    rabbitConnectionFactoryBean.setPort(PORT);
+    rabbitConnectionFactoryBean.setPort(Integer.valueOf(System.getProperty("spring.rabbitmq.port")));
     rabbitConnectionFactoryBean.afterPropertiesSet();
     return rabbitConnectionFactoryBean;
   }
