@@ -35,6 +35,15 @@ public class RabbitMqSendAndReceiveTracingItTest extends BaseRabbitMqTracingItTe
   @Autowired private RabbitTemplate rabbitTemplate;
 
   @Test
+  public void testSendAndReceiveRabbitMessage_whenNoExchange() {
+    final String message = "hello world message!";
+    rabbitTemplate.convertAndSend("#", message);
+
+    long parentSpanId = 0;
+    assertConsumerAndProducerSpans(parentSpanId);
+  }
+
+  @Test
   public void testSendAndReceiveRabbitMessage() {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
