@@ -39,12 +39,27 @@ class RabbitMqSendTracingAspect {
   // CHECKSTYLE:OFF
 
   /**
+   * @see org.springframework.amqp.core.AmqpTemplate#send(String, String, Message)
+   */
+  @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.send(..)) && args(exchange, " +
+                  "routingKey, message)", argNames = "pjp,exchange, routingKey, message"
+  )
+  public Object traceRabbitSend(
+      ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
+      throws Throwable {
+
+    return createTracingHelper()
+        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
+            proceedReplacingMessage(pjp, convertedMessage, 2));
+  }
+
+  /**
    * @see org.springframework.amqp.core.AmqpTemplate#convertAndSend(String, String, Object)
    */
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.convertAndSend(..)) && args(exchange,"
       + "routingKey, message)", argNames = "pjp,exchange,routingKey,message"
   )
-  public Object traceRabbitSend(
+  public Object traceRabbitConvertAndSend(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
     return createTracingHelper()
@@ -57,7 +72,7 @@ class RabbitMqSendTracingAspect {
    */
   @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.convertAndSend(..)) && args(routingKey, message, messagePostProcessor, correlationData)",
         argNames = "pjp,routingKey,message,messagePostProcessor,correlationData")
-  public Object traceRabbitSend(ProceedingJoinPoint pjp, String routingKey, Object message,
+  public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, String routingKey, Object message,
         MessagePostProcessor messagePostProcessor, CorrelationData correlationData) throws Throwable {
     return createTracingHelper()
         .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
@@ -69,7 +84,7 @@ class RabbitMqSendTracingAspect {
    */
   @Around(value = "execution(* org.springframework.amqp.rabbit.core.RabbitTemplate.convertAndSend(..)) && args(exchange, routingKey, message, messagePostProcessor)",
       argNames = "pjp,exchange,routingKey,message,messagePostProcessor")
-  public Object traceRabbitSend(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message,
+  public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message,
                                 MessagePostProcessor messagePostProcessor) throws Throwable {
     return createTracingHelper()
         .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->

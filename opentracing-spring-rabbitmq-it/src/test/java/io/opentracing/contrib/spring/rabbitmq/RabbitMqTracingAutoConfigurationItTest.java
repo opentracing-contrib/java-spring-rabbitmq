@@ -44,6 +44,15 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
   @Autowired private RabbitTemplate rabbitTemplate;
 
   @Test
+  public void givenAutoConfiguredRabbitTemplate_send_shouldBeTraced() {
+    final String message = "hello world message!";
+    Message requestMessage = rabbitTemplate.getMessageConverter().toMessage(message, null);
+    rabbitTemplate.send("myExchange", "#", requestMessage);
+
+    assertConsumerAndProducerSpans(0);
+  }
+
+  @Test
   public void givenAutoConfiguredRabbitTemplate_convertAndSend_shouldBeTraced() {
     final String message = "hello world message!";
     rabbitTemplate.convertAndSend("myExchange", "#", message);
