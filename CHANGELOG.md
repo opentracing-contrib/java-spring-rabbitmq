@@ -1,5 +1,8 @@
 # Changelog
 
+## [2.0.2](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/7) - 2019-06-03
+- [Instrument rabbitTemplate send method](https://github.com/opentracing-contrib/java-spring-rabbitmq/pull/37): [@ask4gilles](https://github.com/ask4gilles)
+
 ## [2.0.1](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/6) - 2019-05-08
 - [Fix tracing auto configuration](https://github.com/opentracing-contrib/java-spring-rabbitmq/pull/34): [@ask4gilles](https://github.com/ask4gilles)
 
