@@ -13,6 +13,36 @@ Version | OpenTracing API | Spring Boot version
 1.0.2 | 0.32.0 | 2.1.x
 2.0.x | 0.32.0 | 2.1.x
 
+# Instrumented methods
+Class | Method | Instrumented
+--- | --- | --- 
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void send(Message message` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void send(String routingKey, Message message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void send(String exchange, String routingKey, Message message)` | &#10004;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(Object message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String routingKey, Object message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String exchange, String routingKey, Object message)` | &#10004;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String routingKey, Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String exchange, String routingKey, Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(Message message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(String routingKey, Message message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(String exchange, String routingKey, Message message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(Object message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(String routingKey, Object message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(String exchange, String routingKey, Object message)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(String routingKey, Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Object convertSendAndReceive(String exchange, String routingKey, Object message, MessagePostProcessor messagePostProcessor)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `<T> T convertSendAndReceiveAsType(Object message, ParameterizedTypeReference<T> responseType)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `<T> T convertSendAndReceiveAsType(String routingKey, Object message,ParameterizedTypeReference<T> responseType)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `<T> T convertSendAndReceiveAsType(String routingKey, Object message,  MessagePostProcessor messagePostProcessor, ParameterizedTypeReference<T> responseType)` | &#10060;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `<T> T convertSendAndReceiveAsType(String exchange, String routingKey, Object message,MessagePostProcessor messagePostProcessor, ParameterizedTypeReference<T> responseType)` | &#10060;
+[RabbitTemplate](https://docs.spring.io/spring-amqp/api/org/springframework/amqp/rabbit/core/RabbitTemplate.html) | `void convertAndSend(String exchange, String routingKey, final Object message,final MessagePostProcessor messagePostProcessor)` | &#10004;
+[RabbitTemplate](https://docs.spring.io/spring-amqp/api/org/springframework/amqp/rabbit/core/RabbitTemplate.html) | `void convertAndSend(String exchange, String routingKey, final Object message,final MessagePostProcessor messagePostProcessor, @Nullable CorrelationData correlationData)` | &#10004;
+[RabbitTemplate](https://docs.spring.io/spring-amqp/api/org/springframework/amqp/rabbit/core/RabbitTemplate.html) | `Message sendAndReceive(final String exchange, final String routingKey, final Message message, @Nullable CorrelationData correlationData)` | &#10004;
+[RabbitTemplate](https://docs.spring.io/spring-amqp/api/org/springframework/amqp/rabbit/core/RabbitTemplate.html) | `Object convertSendAndReceive(final String exchange, final String routingKey, final Object message, @Nullable CorrelationData correlationData)` | &#10004;
+
 ## Configuration
 
 > **Note**: make sure that an `io.opentracing.Tracer` bean is available. It is not provided by this library.
