@@ -29,7 +29,9 @@ import org.springframework.util.ReflectionUtils;
 
 @RequiredArgsConstructor
 public class RabbitMqSendTracingHelper {
+
   private static final Field FIELD_REPLY_TIMEOUT = ReflectionUtils.findField(RabbitTemplate.class, "replyTimeout");
+
   static {
     FIELD_REPLY_TIMEOUT.setAccessible(true);
   }
@@ -49,15 +51,20 @@ public class RabbitMqSendTracingHelper {
 
   public <T> T doWithTracingHeadersMessage(String exchange, String routingKey, Object message, ProceedFunction<T> proceedCallback)
       throws Throwable {
+
     if (routingKey != null && routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
       // don't create new span for response messages when sending reply to AMQP requests that expected response message
       Message convertedMessage = convertMessageIfNecessary(message);
       spanDecorator.onSendReply(convertedMessage.getMessageProperties(), exchange, routingKey, tracer.activeSpan());
       return proceedCallback.apply(convertedMessage);
     }
+
     Message messageWithTracingHeaders = doBefore(exchange, routingKey, message);
+
     try {
+
       T resp = proceedCallback.apply(messageWithTracingHeaders);
+
       if (resp == null && nullResponseMeansError) {
         Span span = scope.span();
         spanDecorator.onError(null, span);
@@ -74,6 +81,7 @@ public class RabbitMqSendTracingHelper {
   }
 
   private Message doBefore(String exchange, String routingKey, Object message) {
+
     Message convertedMessage = convertMessageIfNecessary(message);
 
     final MessageProperties messageProperties = convertedMessage.getMessageProperties();

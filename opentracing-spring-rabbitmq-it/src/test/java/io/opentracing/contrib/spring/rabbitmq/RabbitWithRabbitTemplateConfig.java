@@ -23,6 +23,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 /**
+ * @author Ats Uiboupin
+ */
+/**
  * Separated from {@link RabbitWithoutRabbitTemplateConfig} to allow creating tests without RabbitTemplate (defined in this conf)
  */
 @Configuration
@@ -32,21 +35,23 @@ public class RabbitWithRabbitTemplateConfig {
   static final long RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(1);
 
   @Bean
-  public RabbitTemplate rabbitTemplate(RabbitConnectionFactoryBean rabbitConnectionFactoryBean)
-      throws Exception {
-    final CachingConnectionFactory cachingConnectionFactory =
-        new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
+  public RabbitTemplate rabbitTemplate(RabbitConnectionFactoryBean rabbitConnectionFactoryBean) throws Exception {
+    CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory(rabbitConnectionFactoryBean.getObject());
     RabbitTemplate rabbitTemplate = new RabbitTemplate(cachingConnectionFactory);
     rabbitTemplate.setExchange("myExchange");
     return configureRabbitTemplate(rabbitTemplate);
   }
 
-  public static RabbitTemplate configureRabbitTemplate(RabbitTemplate rabbitTemplate) {
-    SimpleMessageConverter messageConverter = new SimpleMessageConverter();
-    messageConverter.setCreateMessageIds(true);
+  static RabbitTemplate configureRabbitTemplate(RabbitTemplate rabbitTemplate) {
+    SimpleMessageConverter messageConverter = createMessageConverter();
     rabbitTemplate.setMessageConverter(messageConverter);
     rabbitTemplate.setReplyTimeout(RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS);
     return rabbitTemplate;
   }
 
+  private static SimpleMessageConverter createMessageConverter() {
+    SimpleMessageConverter messageConverter = new SimpleMessageConverter();
+    messageConverter.setCreateMessageIds(true);
+    return messageConverter;
+  }
 }

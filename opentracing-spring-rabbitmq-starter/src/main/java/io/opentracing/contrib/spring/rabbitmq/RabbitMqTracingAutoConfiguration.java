@@ -42,19 +42,23 @@ import org.springframework.util.Assert;
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class RabbitMqTracingAutoConfiguration {
 
-  @Autowired @Lazy private Tracer tracer;
+  @Autowired
+  @Lazy
+  private Tracer tracer;
 
-  @Bean
   /**
    * If RabbitTemplate bean isn't defined, tracing outgoing AMQP messages isn't done automatically,
-   * but incoming AMQP messages are still traced automatically via {@link #rabbitMqBeanPostProcessor(RabbitMqReceiveTracingInterceptor)}
+   * but incoming AMQP messages are still traced automatically
+   * via {@link #rabbitMqBeanPostProcessor(RabbitMqReceiveTracingInterceptor)}
    */
   @ConditionalOnBean(RabbitTemplate.class)
-  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(
-      RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
-    Assert.notNull(
-        rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
-    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getMessageConverter(), spanDecorator);
+  @Bean
+  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate,
+                                                             RabbitMqSpanDecorator spanDecorator) {
+    Assert.notNull(rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
+
+    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getRoutingKey(),
+        rabbitTemplate.getMessageConverter(), spanDecorator);
   }
 
   @Bean
@@ -67,8 +71,8 @@ public class RabbitMqTracingAutoConfiguration {
     return new RabbitMqBeanPostProcessor(interceptor);
   }
 
-  @Bean
   @ConditionalOnMissingBean(RabbitMqSpanDecorator.class)
+  @Bean
   public RabbitMqSpanDecorator rabbitMqSpanDecorator() {
     return new RabbitMqSpanDecorator();
   }

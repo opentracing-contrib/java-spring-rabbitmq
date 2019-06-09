@@ -24,7 +24,11 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
+/**
+ * @author Ats Uiboupin
+ */
 public class TracingRabbitTemplate extends RabbitTemplate {
+
   private final Tracer tracer;
   private final RabbitMqSpanDecorator spanDecorator;
 
@@ -51,7 +55,7 @@ public class TracingRabbitTemplate extends RabbitTemplate {
   public void send(String exchange, String routingKey, Message message, CorrelationData correlationData) throws AmqpException {
     // used when sending reply to AMQP requests that expected response message
     // or when not waiting for reply (for example sending out events).
-    if (routingKey != null && routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
+    if (routingKey.startsWith(Address.AMQ_RABBITMQ_REPLY_TO + ".")) {
       super.send(exchange, routingKey, message, correlationData);
       spanDecorator.onSendReply(message.getMessageProperties(), exchange, routingKey, tracer.activeSpan());
       return; // don't create new span for response messages

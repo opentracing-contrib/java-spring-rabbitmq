@@ -27,8 +27,12 @@ import java.util.List;
 import java.util.Map;
 import lombok.Data;
 
+/**
+ * @author Ats Uiboupin
+ */
 @Data
 public class FinishedSpansHelper {
+
   private final List<MockSpan> allSpans;
   private MockSpan sendSpan;
   private MockSpan receiveSpan;
