@@ -19,30 +19,30 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
-import io.opentracing.contrib.spring.rabbitmq.RabbitWithoutRabbitTemplateConfig.TestMessageListener;
 import io.opentracing.mock.MockSpan;
+
 import java.util.List;
 
 import org.junit.Test;
+
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
+
 /**
- * Test tracing with default auto-configuration enabled and a declared RabbitTemplate bean.
- * @author Ats Uiboupin
+ * Test tracing with manual configuration provided.
  * @author Gilles Robert
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    classes = RabbitMqTracingAutoConfigurationItTest.TestConfig.class
+    classes = RabbitMqTracingManualConfigurationItTest.TestConfig.class
 )
-public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingItTest {
+public class RabbitMqTracingManualConfigurationItTest extends BaseRabbitMqTracingItTest {
 
   @Autowired
   private RabbitTemplate rabbitTemplate;
@@ -210,7 +210,7 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
   public void sendAndReceive_withProcessedLongerThanRabbitTemplateTimeout_shouldProduceSpanWithError() {
     // given
     Message requestMessage = createMessage();
-    requestMessage.getMessageProperties().setHeader(TestMessageListener.HEADER_SLEEP_MILLIS,
+    requestMessage.getMessageProperties().setHeader(RabbitWithoutRabbitTemplateConfig.TestMessageListener.HEADER_SLEEP_MILLIS,
         RabbitWithRabbitTemplateConfig.RABBIT_TEMPLATE_REPLY_TIMEOUT_MILLIS + 500);
 
     // when
@@ -329,21 +329,21 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
 
   private void assertOnResponse(Message response) {
     assertThat(response, notNullValue());
-    assertThat(new String(response.getBody(), UTF_8), equalTo(TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
+    assertThat(new String(response.getBody(), UTF_8), equalTo(
+        RabbitWithoutRabbitTemplateConfig.TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
   }
 
   private void assertOnResponse(Object response) {
     assertThat(response, notNullValue());
-    assertThat(response.toString(), equalTo(TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
+    assertThat(response.toString(), equalTo(
+        RabbitWithoutRabbitTemplateConfig.TestMessageListener.REPLY_MSG_PREFIX + MESSAGE));
   }
 
   @Configuration
   @Import({
       RabbitWithRabbitTemplateConfig.class,
       TracerConfig.class,
-  })
-  @ImportAutoConfiguration(classes = {
-      RabbitMqTracingAutoConfiguration.class // using auto-configuration for tracing RabbitMq
+      RabbitMqTracingManualConfig.class
   })
   static class TestConfig {
   }

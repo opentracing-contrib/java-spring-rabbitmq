@@ -31,26 +31,33 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
  * @author Gilles Robert
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = {MockTracingConfiguration.class, RabbitMqSpanDecoratorConfiguration.class})
+@Import(value = {MockTracingConfiguration.class, RabbitMqSpanDecoratorConfiguration.class})
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqSendTracingAspectTest {
 
+  private static final String ROUTING_KEY = "io.opentracing.event.AnEvent";
+
   private RabbitMqSendTracingAspect aspect;
-  @Autowired private MockTracer mockTracer;
-  @Autowired private RabbitMqSpanDecorator spanDecorator;
-  @Mock private ProceedingJoinPoint proceedingJoinPoint;
-  @Mock private MessageConverter messageConverter;
+  @Autowired
+  private MockTracer mockTracer;
+  @Autowired
+  private RabbitMqSpanDecorator spanDecorator;
+  @Mock
+  private ProceedingJoinPoint proceedingJoinPoint;
+  @Mock
+  private MessageConverter messageConverter;
 
   @Before
   public void init() {
     MockitoAnnotations.initMocks(this);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, "overridden-exchange", ROUTING_KEY,
+        messageConverter, spanDecorator);
   }
 
   @After
@@ -61,14 +68,13 @@ public class RabbitMqSendTracingAspectTest {
   @Test
   public void testTraceRabbitSend_whenNoPropertiesHeaders() throws Throwable {
     // given
+    String exchange = "opentracing.event.exchange";
+    String routingKey = ROUTING_KEY;
+
     Span span = mockTracer.buildSpan("test").start();
 
     mockTracer.scopeManager().activate(span, false);
 
-    aspect = new RabbitMqSendTracingAspect(mockTracer, "overridden-exchange", messageConverter, spanDecorator);
-
-    String exchange = "opentracing.event.exchange";
-    String routingKey = "io.opentracing.event.AnEvent";
     TestMessage<String> myMessage = new TestMessage<>("");
 
     Object[] args = new Object[] {exchange, routingKey, myMessage};
@@ -94,21 +100,18 @@ public class RabbitMqSendTracingAspectTest {
   @Test
   public void testTraceRabbitSend_whenNoConversionIsNeeded() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, "overridden-exchange", messageConverter, spanDecorator);
-
     String exchange = "opentracing.event.exchange";
-    String routingKey = "io.opentracing.event.AnEvent";
 
     MessageProperties properties = new MessageProperties();
     Message message = new Message("".getBytes(), properties);
-    Object[] args = new Object[] {exchange, routingKey, message};
+    Object[] args = new Object[] {exchange, ROUTING_KEY, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
     given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
     // when
-    aspect.traceRabbitSend(proceedingJoinPoint, exchange, routingKey, message);
+    aspect.traceRabbitSend(proceedingJoinPoint, exchange, ROUTING_KEY, message);
 
     // then
     verify(proceedingJoinPoint).getArgs();
@@ -118,23 +121,21 @@ public class RabbitMqSendTracingAspectTest {
   @Test(expected = RuntimeException.class)
   public void testTraceRabbitSend_whenException() throws Throwable {
     // given
-    aspect = new RabbitMqSendTracingAspect(mockTracer, "overridden-exchange", messageConverter, spanDecorator);
-
     String exchange = "opentracing.event.exchange";
-    String routingKey = "io.opentracing.event.AnEvent";
 
     MessageProperties properties = new MessageProperties();
     Message message = new Message("".getBytes(), properties);
-    Object[] args = new Object[] {exchange, routingKey, message};
+    Object[] args = new Object[] {exchange, ROUTING_KEY, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
     given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
     given(proceedingJoinPoint.proceed(args)).willThrow(new RuntimeException());
+
     try {
       // when
-      aspect.traceRabbitSend(proceedingJoinPoint, exchange, routingKey, message);
+      aspect.traceRabbitSend(proceedingJoinPoint, exchange, ROUTING_KEY, message);
     } catch (RuntimeException e) {
       // then
       verify(proceedingJoinPoint).getArgs();

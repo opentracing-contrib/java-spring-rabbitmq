@@ -34,6 +34,7 @@ public class RabbitTemplateProviderConfig {
    */
   @AllArgsConstructor
   public static class RabbitTemplateProvider {
+
     @Getter
     private RabbitTemplate rabbitTemplate;
   }

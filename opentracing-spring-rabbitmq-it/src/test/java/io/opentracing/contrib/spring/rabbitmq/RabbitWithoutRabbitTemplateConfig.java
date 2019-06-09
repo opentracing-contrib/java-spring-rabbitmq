@@ -36,6 +36,10 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * @author Ats Uiboupin
+ * @author Gilles Robert
+ */
 @Configuration
 @ImportAutoConfiguration(RabbitTemplateProviderConfig.class)
 public class RabbitWithoutRabbitTemplateConfig {
@@ -95,15 +99,15 @@ public class RabbitWithoutRabbitTemplateConfig {
   @AllArgsConstructor
   public static class TestMessageListener implements ChannelAwareMessageListener {
 
+    public static final String HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER = "custom.error";
     static final String REPLY_MSG_PREFIX = "Reply: ";
     static final String HEADER_SLEEP_MILLIS = "sleep.millis";
     static final String HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE = "add.custom.error";
-    public static final String HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER = "custom.error";
     private final RabbitTemplateProvider rabbitTemplateProvider;
 
     @Override
     public void onMessage(Message message, Channel channel) {
-      log.warn("Got message: {} from channel {}", message, channel);
+      log.info("Got message: {} from channel {}", message, channel);
       sleepIfRequested((Long) message.getMessageProperties().getHeaders().get(HEADER_SLEEP_MILLIS));
       sendReplyIfRequested(message);
     }
@@ -123,13 +127,16 @@ public class RabbitWithoutRabbitTemplateConfig {
     private void sendReplyIfRequested(Message message) {
       MessageProperties messageProperties = message.getMessageProperties();
       String replyToProperty = messageProperties.getReplyTo();
+
       if (replyToProperty != null) {
         RabbitTemplate rabbitTemplate = rabbitTemplateProvider.getRabbitTemplate();
         Address replyTo = new Address(replyToProperty);
         String replyMsg = REPLY_MSG_PREFIX + new String(message.getBody(), UTF_8);
         Message replyMessage = rabbitTemplate.getMessageConverter().toMessage(replyMsg, null);
 
-        Object addCustomResponseErrorMarkerHeader = messageProperties.getHeaders().get(HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE);
+        Object addCustomResponseErrorMarkerHeader = messageProperties.getHeaders()
+            .get(HEADER_ADD_CUSTOM_ERROR_HEADER_TO_RESPONSE);
+
         if (addCustomResponseErrorMarkerHeader != null) {
           replyMessage.getMessageProperties().setHeader(HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER, "dummy error message");
         }

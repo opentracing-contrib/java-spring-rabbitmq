@@ -32,8 +32,7 @@ public class RabbitMqMessagePropertiesExtractAdapterTest {
     String value = "myValue";
     Map<String, String> map = Collections.singletonMap(key, value);
     Map<String, Object> headers = Collections.singletonMap(key, value);
-    RabbitMqMessagePropertiesExtractAdapter adapter =
-        new RabbitMqMessagePropertiesExtractAdapter(headers);
+    RabbitMqMessagePropertiesExtractAdapter adapter = new RabbitMqMessagePropertiesExtractAdapter(headers);
 
     // when
     final Iterator<Map.Entry<String, String>> iterator = adapter.iterator();
@@ -46,8 +45,7 @@ public class RabbitMqMessagePropertiesExtractAdapterTest {
   public void testIterator_whenNullValue() {
     // given
     Map<String, Object> headers = Collections.singletonMap("myKey", null);
-    RabbitMqMessagePropertiesExtractAdapter adapter =
-        new RabbitMqMessagePropertiesExtractAdapter(headers);
+    RabbitMqMessagePropertiesExtractAdapter adapter = new RabbitMqMessagePropertiesExtractAdapter(headers);
 
     // when
     final Iterator<Map.Entry<String, String>> iterator = adapter.iterator();
@@ -62,8 +60,7 @@ public class RabbitMqMessagePropertiesExtractAdapterTest {
     String key = "myKey";
     String value = "myValue";
     Map<String, Object> headers = Collections.singletonMap(key, value);
-    RabbitMqMessagePropertiesExtractAdapter adapter =
-        new RabbitMqMessagePropertiesExtractAdapter(headers);
+    RabbitMqMessagePropertiesExtractAdapter adapter = new RabbitMqMessagePropertiesExtractAdapter(headers);
 
     // when
     adapter.put(key, value);

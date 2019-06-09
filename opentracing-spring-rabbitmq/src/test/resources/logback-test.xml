@@ -10,9 +10,6 @@
   <!-- ========== -->
   <!-- Log levels -->
   <!-- ========== -->
-  <logger name="io.opentracing.contrib.spring.rabbitmq" level="info"/>
-  <logger name="org.testcontainers" level="warn"/>
-  <logger name="com.github.dockerjava" level="warn"/>
 
   <!-- ==== -->
   <!-- Root -->

@@ -19,8 +19,12 @@ import io.opentracing.util.GlobalTracerTestUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * @author Ats Uiboupin
+ */
 @Configuration
 public class TracerConfig {
+
   @Bean
   public MockTracer mockTracer() {
     GlobalTracerTestUtil.resetGlobalTracer();

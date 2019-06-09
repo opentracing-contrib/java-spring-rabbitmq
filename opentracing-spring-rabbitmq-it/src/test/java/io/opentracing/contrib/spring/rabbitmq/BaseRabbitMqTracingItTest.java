@@ -39,6 +39,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+/**
+ * @author Ats Uiboupin
+ * @author Gilles Robert
+ */
 @RunWith(SpringJUnit4ClassRunner.class)
 // Needed to destroy rabbit message listeners (created by RabbitWithoutRabbitTemplateConfig.messageListenerContainer)
 // to avoid race condition errors related to listeners from previous test applicationContext grabbing messages
@@ -46,6 +50,13 @@ import org.testcontainers.containers.wait.strategy.Wait;
 // and hence next test never sees that span when checking finished spans.
 @DirtiesContext
 public abstract class BaseRabbitMqTracingItTest {
+
+  static final String EXCHANGE = "myExchange";
+  static final String ROUTING_KEY = "#";
+  static final String EMPTY_ROUTING_KEY = "";
+  static final String MESSAGE = "hello world message!";
+  static final String REASON =
+      "Didn't receive receive span (perhaps consumer slept too long or didn't wait enough time to receive receive span?)";
 
   private static final GenericContainer RABBIT =
       new GenericContainer("rabbitmq:3.7.14-alpine")
@@ -59,43 +70,32 @@ public abstract class BaseRabbitMqTracingItTest {
     System.setProperty("spring.rabbitmq.port", String.valueOf(RABBIT.getMappedPort(5672)));
   }
 
-  @Autowired protected MockTracer tracer;
+  @Autowired
+  protected MockTracer tracer;
 
   @Before
   public void setup() {
     tracer.reset();
   }
 
-  protected void assertConsumerAndProducerSpans(long parentSpanId) {
+  void assertConsumerAndProducerSpans(long parentSpanId, String routingKey) {
     FinishedSpansHelper spans = awaitFinishedSpans();
     assertEquals(2, spans.getAllSpans().size());
-    assertRabbitProducerSpan(spans.getSendSpan(), parentSpanId);
+    assertRabbitProducerSpan(spans.getSendSpan(), parentSpanId, routingKey);
 
-    assertRabbitConsumerSpan(spans.getReceiveSpan());
+    assertRabbitConsumerSpan(spans.getReceiveSpan(), routingKey);
     spans.assertSameTraceId();
   }
 
-  protected void assertRabbitConsumerSpan(MockSpan mockReceivedSpan) {
+  void assertRabbitConsumerSpan(MockSpan mockReceivedSpan, String routingKey) {
     String expectedConsumerQueueName = "myQueue";
-    assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6);
+    assertRabbitSpan(mockReceivedSpan, RabbitMqTracingTags.SPAN_KIND_CONSUMER, 6, routingKey);
     assertThat(mockReceivedSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_CONSUMER));
     assertThat(mockReceivedSpan.tags().get("consumerqueue"), equalTo(expectedConsumerQueueName));
     assertThat(mockReceivedSpan.generatedErrors().size(), is(0));
   }
 
-  private void assertRabbitProducerSpan(MockSpan mockSentSpan, long expectedParentSpanId) {
-    assertThat(mockSentSpan.parentId(), equalTo(expectedParentSpanId));
-    assertRabbitSpan(mockSentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER, 5);
-    assertThat(mockSentSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
-  }
-
-  private void assertRabbitSpan(MockSpan mockSentSpan, String spanKind, int expectedTagsCount) {
-    assertThat(mockSentSpan.tags(), notNullValue());
-    assertThat(mockSentSpan.tags().size(), is(expectedTagsCount));
-    assertSpanRabbitTags(mockSentSpan, spanKind);
-  }
-
-  protected void assertSpanRabbitTags(MockSpan mockSentSpan, String spanKind) {
+  void assertSpanRabbitTags(MockSpan mockSentSpan, String spanKind, String routingKey) {
     assertThat(mockSentSpan.tags().get("messageid"), notNullValue());
     assertThat(
         mockSentSpan.tags().get("component"),
@@ -104,15 +104,15 @@ public abstract class BaseRabbitMqTracingItTest {
     assertThat(
         mockSentSpan.tags().get("span.kind"),
         equalTo(spanKind));
-    assertThat(mockSentSpan.tags().get("routingkey"), equalTo("#"));
+    assertThat(mockSentSpan.tags().get("routingkey"), equalTo(routingKey));
   }
 
-  protected void assertErrorTag(MockSpan span) {
+  void assertErrorTag(MockSpan span) {
     Map<String, Object> sendSpanTags = span.tags();
     assertThat(sendSpanTags.get(Tags.ERROR.getKey()), equalTo(true));
   }
 
-  protected FinishedSpansHelper awaitFinishedSpans() {
+  FinishedSpansHelper awaitFinishedSpans() {
     await()
         .timeout(Duration.TWO_SECONDS)
         .until(
@@ -124,12 +124,24 @@ public abstract class BaseRabbitMqTracingItTest {
     return new FinishedSpansHelper(tracer.finishedSpans());
   }
 
-  protected void checkNoSpans() {
+  void checkNoSpans() {
     try {
       FinishedSpansHelper spans = awaitFinishedSpans();
       Assert.fail("Expected not to receive trace spans when autoconfiguration isn't enabled, but got: " + spans);
     } catch (ConditionTimeoutException e) {
       assertThat(tracer.finishedSpans().size(), equalTo(0));
     }
+  }
+
+  private void assertRabbitProducerSpan(MockSpan mockSentSpan, long expectedParentSpanId, String routingKey) {
+    assertThat(mockSentSpan.parentId(), equalTo(expectedParentSpanId));
+    assertRabbitSpan(mockSentSpan, RabbitMqTracingTags.SPAN_KIND_PRODUCER, 5, routingKey);
+    assertThat(mockSentSpan.operationName(), equalTo(RabbitMqTracingTags.SPAN_KIND_PRODUCER));
+  }
+
+  private void assertRabbitSpan(MockSpan mockSentSpan, String spanKind, int expectedTagsCount, String routingKey) {
+    assertThat(mockSentSpan.tags(), notNullValue());
+    assertThat(mockSentSpan.tags().size(), is(expectedTagsCount));
+    assertSpanRabbitTags(mockSentSpan, spanKind, routingKey);
   }
 }

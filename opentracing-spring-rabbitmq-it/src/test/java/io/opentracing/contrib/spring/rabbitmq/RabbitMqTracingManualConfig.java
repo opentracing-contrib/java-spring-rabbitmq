@@ -23,18 +23,24 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.util.Assert;
 
+/**
+ * @author Ats Uiboupin
+ */
 @Configuration
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 public class RabbitMqTracingManualConfig {
 
-  @Autowired @Lazy private Tracer tracer;
+  @Autowired
+  @Lazy
+  private Tracer tracer;
 
   @Bean
-  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate, RabbitMqSpanDecorator spanDecorator) {
-    Assert.notNull(
-        rabbitTemplate.getMessageConverter(),
-        "RabbitTemplate has no message converter configured");
-    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getMessageConverter(), spanDecorator);
+  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate,
+                                                             RabbitMqSpanDecorator spanDecorator) {
+    Assert.notNull(rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
+
+    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getRoutingKey(),
+        rabbitTemplate.getMessageConverter(), spanDecorator);
   }
 
   @Bean
@@ -43,8 +49,7 @@ public class RabbitMqTracingManualConfig {
   }
 
   @Bean
-  public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(
-      RabbitMqReceiveTracingInterceptor interceptor) {
+  public RabbitMqBeanPostProcessor rabbitMqBeanPostProcessor(RabbitMqReceiveTracingInterceptor interceptor) {
     return new RabbitMqBeanPostProcessor(interceptor);
   }
 

@@ -23,26 +23,37 @@ import org.springframework.amqp.core.MessageProperties;
 
 /**
  * @author Ats Uiboupin
+ * @author Gilles Robert
  */
 public class CustomizedRabbitMqSpanDecorator extends RabbitMqSpanDecorator {
-  public static final String OVERRIDEN_OPERATION_NAME_FOR_SENDING = RabbitMqTracingTags.SPAN_KIND_PRODUCER + ": overridden";
-  public static final String OVERRIDEN_OPERATION_NAME_FOR_RECEIVING = RabbitMqTracingTags.SPAN_KIND_CONSUMER + ": overridden";
+
+  private static final String OVERRIDDEN = "overridden";
+  private static final String SEPARATOR = ": ";
+
+  public static final String OVERRIDDEN_OPERATION_NAME_FOR_SENDING =
+      String.join(SEPARATOR,RabbitMqTracingTags.SPAN_KIND_PRODUCER, OVERRIDDEN);
+  public static final String OVERRIDDEN_OPERATION_NAME_FOR_RECEIVING =
+      String.join(SEPARATOR,RabbitMqTracingTags.SPAN_KIND_CONSUMER, OVERRIDDEN);
 
   @Override
   public void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
     super.onSend(messageProperties, exchange, routingKey, span);
-    span.setOperationName(OVERRIDEN_OPERATION_NAME_FOR_SENDING);
+    span.setOperationName(OVERRIDDEN_OPERATION_NAME_FOR_SENDING);
   }
 
   @Override
   public void onReceive(MessageProperties messageProperties, Span span) {
     super.onReceive(messageProperties, span);
-    span.setOperationName(OVERRIDEN_OPERATION_NAME_FOR_RECEIVING);
+    span.setOperationName(OVERRIDDEN_OPERATION_NAME_FOR_RECEIVING);
   }
 
   @Override
-  public void onSendReply(MessageProperties replyMessageProperties, String replyExchange, String replyRoutingKey, Span span) {
-    String errorMessageToAdd = (String) replyMessageProperties.getHeaders().get(TestMessageListener.HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER);
+  public void onSendReply(MessageProperties replyMessageProperties, String replyExchange,
+                          String replyRoutingKey, Span span) {
+    String errorMessageToAdd = (String) replyMessageProperties
+        .getHeaders()
+        .get(TestMessageListener.HEADER_CUSTOM_RESPONSE_ERROR_MARKER_HEADER);
+
     if (errorMessageToAdd != null) {
       Tags.ERROR.set(span, true);
     }
