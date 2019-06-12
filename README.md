@@ -119,7 +119,8 @@ Add the following dependency to your pom.xml:
   <artifactId>opentracing-spring-rabbitmq</artifactId>
 </dependency>
 ```
-
+## Jaeger UI example
+![Alt text](img/produce-consumer-jaeger.png?raw=true "Jaeger UI")
 ## Development
 Maven checkstyle plugin is used to maintain consistent code style based on [Google Style Guides](https://github.com/google/styleguide)
 ```shell
