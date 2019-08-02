@@ -35,21 +35,16 @@ final class RabbitMqTracingUtils {
 
   static Optional<Scope> buildReceiveSpan(MessageProperties messageProperties, Tracer tracer) {
     Optional<SpanContext> context = findParent(messageProperties, tracer);
-    if (context.isPresent()) {
-      Tracer.SpanBuilder spanBuilder =
-          tracer
-              .buildSpan(RabbitMqTracingTags.SPAN_KIND_CONSUMER)
-              .ignoreActiveSpan()
-              .withTag(Tags.SPAN_KIND.getKey(), RabbitMqTracingTags.SPAN_KIND_CONSUMER);
+    Tracer.SpanBuilder spanBuilder =
+        tracer
+            .buildSpan(RabbitMqTracingTags.SPAN_KIND_CONSUMER)
+            .ignoreActiveSpan()
+            .withTag(Tags.SPAN_KIND.getKey(), RabbitMqTracingTags.SPAN_KIND_CONSUMER);
 
-      spanBuilder.addReference(References.FOLLOWS_FROM, context.get());
+    context.ifPresent(spanContext -> spanBuilder.addReference(References.FOLLOWS_FROM, spanContext));
+    Scope scope = spanBuilder.startActive(true);
 
-      Scope scope = spanBuilder.startActive(true);
-
-      return Optional.of(scope);
-    }
-
-    return Optional.empty();
+    return Optional.of(scope);
   }
 
   static Scope buildSendSpan(Tracer tracer, MessageProperties messageProperties) {
