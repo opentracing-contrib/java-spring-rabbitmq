@@ -113,7 +113,6 @@ public class RabbitMqReceiveTracingInterceptorTest {
         interceptor.invoke(methodInvocation);
 
         // then
-        assertTraceAndSpanId("1","2");
     }
 
     @Test(expected = RuntimeException.class)
@@ -126,7 +125,6 @@ public class RabbitMqReceiveTracingInterceptorTest {
         interceptor.invoke(methodInvocation);
 
         // then
-        assertTraceAndSpanId("1","2");
     }
 
     private void assertTraceAndSpanId(String traceId, String spanId) {
