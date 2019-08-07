@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import io.opentracing.Span;
 import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
+
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -47,7 +48,6 @@ public class RabbitMqReceiveTracingInterceptorTest {
 
     @Autowired
     private MockTracer mockTracer;
-
     @Spy
     private RabbitMqSpanDecorator spanDecorator;
 
@@ -57,8 +57,8 @@ public class RabbitMqReceiveTracingInterceptorTest {
         resetSpanIdCounter();
     }
 
-    private void resetSpanIdCounter() throws NoSuchFieldException, IllegalAccessException{
-        Field spanIdCounter =  MockSpan.class.getDeclaredField("nextId");
+    private void resetSpanIdCounter() throws NoSuchFieldException, IllegalAccessException {
+        Field spanIdCounter = MockSpan.class.getDeclaredField("nextId");
         spanIdCounter.setAccessible(true);
         ((AtomicLong)spanIdCounter.get(null)).set(0L);
     }
