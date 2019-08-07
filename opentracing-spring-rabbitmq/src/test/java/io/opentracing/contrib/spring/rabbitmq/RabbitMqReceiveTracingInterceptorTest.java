@@ -46,223 +46,223 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 @RunWith(SpringJUnit4ClassRunner.class)
 public class RabbitMqReceiveTracingInterceptorTest {
 
-    @Autowired
-    private MockTracer mockTracer;
-    @Spy
-    private RabbitMqSpanDecorator spanDecorator;
+  @Autowired
+  private MockTracer mockTracer;
+  @Spy
+  private RabbitMqSpanDecorator spanDecorator;
 
-    @Before
-    public void setup() throws Exception {
-        mockTracer.reset();
-        resetSpanIdCounter();
+  @Before
+  public void setup() throws Exception {
+    mockTracer.reset();
+    resetSpanIdCounter();
+  }
+
+  private void resetSpanIdCounter() throws NoSuchFieldException, IllegalAccessException {
+    Field spanIdCounter = MockSpan.class.getDeclaredField("nextId");
+    spanIdCounter.setAccessible(true);
+    ((AtomicLong) spanIdCounter.get(null)).set(0L);
+  }
+
+  @Test
+  public void testInvoke_whenContextAndActiveSpan() throws Throwable {
+    // given
+    mockTracer.buildSpan("parent").startActive(false);
+    RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
+    MethodInvocation methodInvocation = new TestMethodInvocationWithContext();
+
+    // when
+    interceptor.invoke(methodInvocation);
+
+    // then
+    assertTraceAndSpanId("1", "3");
+  }
+
+  @Test
+  public void testInvoke_whenContextAndNoActiveSpan() throws Throwable {
+    // given
+    RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
+    MethodInvocation methodInvocation = new TestMethodInvocation();
+
+    // when
+    interceptor.invoke(methodInvocation);
+
+    // then
+    assertTraceAndSpanId("1", "2");
+  }
+
+  @Test
+  public void testInvoke_whenNoContext() throws Throwable {
+    // given
+    RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
+    MethodInvocation methodInvocation = new TestMethodInvocation();
+
+    // when
+    interceptor.invoke(methodInvocation);
+
+    // then
+    assertTraceAndSpanId("1", "2");
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testInvoke_whenException() throws Throwable {
+    // given
+    RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
+    MethodInvocation methodInvocation = new TestExceptionMethodInvocation();
+
+    // when
+    interceptor.invoke(methodInvocation);
+
+    // then
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testInvoke_whenExceptionAndChildPresent() throws Throwable {
+    // given
+    RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
+    MethodInvocation methodInvocation = new TestExceptionMethodInvocationWithContext();
+
+    // when
+    interceptor.invoke(methodInvocation);
+
+    // then
+  }
+
+  private void assertTraceAndSpanId(String traceId, String spanId) {
+    ArgumentCaptor<Span> span = ArgumentCaptor.forClass(Span.class);
+    verify(spanDecorator).onReceive(any(MessageProperties.class), span.capture());
+    assertThat(span.getValue().context().toTraceId()).isEqualTo(traceId);
+    assertThat(span.getValue().context().toSpanId()).isEqualTo(spanId);
+  }
+
+  private Message getMessage() {
+    final MessageProperties messageProperties = new MessageProperties();
+    messageProperties.setReceivedExchange("exchange");
+    messageProperties.setReceivedRoutingKey("routingKey");
+    messageProperties.setMessageId("messageId");
+    return new Message("".getBytes(Charset.defaultCharset()), messageProperties);
+  }
+
+  private Message getMessageWithContext() {
+    Message message = getMessage();
+    MessageProperties messageProperties = message.getMessageProperties();
+    messageProperties.setHeader("traceid", 1L);
+    messageProperties.setHeader("spanid", 1L);
+    return new Message("".getBytes(Charset.defaultCharset()), messageProperties);
+  }
+
+  private class TestMethodInvocation implements MethodInvocation {
+
+    @Override
+    public Method getMethod() {
+      return null;
     }
 
-    private void resetSpanIdCounter() throws NoSuchFieldException, IllegalAccessException {
-        Field spanIdCounter = MockSpan.class.getDeclaredField("nextId");
-        spanIdCounter.setAccessible(true);
-        ((AtomicLong)spanIdCounter.get(null)).set(0L);
+    @Override
+    public Object[] getArguments() {
+      Message message = getMessage();
+      return new Object[] {null, message};
     }
 
-    @Test
-    public void testInvoke_whenContextAndActiveSpan() throws Throwable {
-        // given
-        mockTracer.buildSpan("parent").startActive(false);
-        RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
-        MethodInvocation methodInvocation = new TestMethodInvocationWithContext();
-
-        // when
-        interceptor.invoke(methodInvocation);
-
-        // then
-        assertTraceAndSpanId("1","3");
+    @Override
+    public Object proceed() {
+      return null;
     }
 
-    @Test
-    public void testInvoke_whenContextAndNoActiveSpan() throws Throwable {
-        // given
-        RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
-        MethodInvocation methodInvocation = new TestMethodInvocation();
-
-        // when
-        interceptor.invoke(methodInvocation);
-
-        // then
-        assertTraceAndSpanId("1","2");
+    @Override
+    public Object getThis() {
+      return null;
     }
 
-    @Test
-    public void testInvoke_whenNoContext() throws Throwable {
-        // given
-        RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
-        MethodInvocation methodInvocation = new TestMethodInvocation();
+    @Override
+    public AccessibleObject getStaticPart() {
+      return null;
+    }
+  }
 
-        // when
-        interceptor.invoke(methodInvocation);
+  private class TestMethodInvocationWithContext implements MethodInvocation {
 
-        // then
-        assertTraceAndSpanId("1","2");
+    @Override
+    public Method getMethod() {
+      return null;
     }
 
-    @Test(expected = RuntimeException.class)
-    public void testInvoke_whenException() throws Throwable {
-        // given
-        RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
-        MethodInvocation methodInvocation = new TestExceptionMethodInvocation();
-
-        // when
-        interceptor.invoke(methodInvocation);
-
-        // then
+    @Override
+    public Object[] getArguments() {
+      Message message = getMessageWithContext();
+      return new Object[] {null, message};
     }
 
-    @Test(expected = RuntimeException.class)
-    public void testInvoke_whenExceptionAndChildPresent() throws Throwable {
-        // given
-        RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
-        MethodInvocation methodInvocation = new TestExceptionMethodInvocationWithContext();
-
-        // when
-        interceptor.invoke(methodInvocation);
-
-        // then
+    @Override
+    public Object proceed() {
+      return null;
     }
 
-    private void assertTraceAndSpanId(String traceId, String spanId) {
-        ArgumentCaptor<Span> span = ArgumentCaptor.forClass(Span.class);
-        verify(spanDecorator).onReceive(any(MessageProperties.class), span.capture());
-        assertThat(span.getValue().context().toTraceId()).isEqualTo(traceId);
-        assertThat(span.getValue().context().toSpanId()).isEqualTo(spanId);
+    @Override
+    public Object getThis() {
+      return null;
     }
 
-    private Message getMessage() {
-        final MessageProperties messageProperties = new MessageProperties();
-        messageProperties.setReceivedExchange("exchange");
-        messageProperties.setReceivedRoutingKey("routingKey");
-        messageProperties.setMessageId("messageId");
-        return new Message("".getBytes(Charset.defaultCharset()), messageProperties);
+    @Override
+    public AccessibleObject getStaticPart() {
+      return null;
+    }
+  }
+
+  private class TestExceptionMethodInvocation implements MethodInvocation {
+
+    @Override
+    public Method getMethod() {
+      return null;
     }
 
-    private Message getMessageWithContext() {
-        Message message = getMessage();
-        MessageProperties messageProperties = message.getMessageProperties();
-        messageProperties.setHeader("traceid", 1L);
-        messageProperties.setHeader("spanid", 1L);
-        return new Message("".getBytes(Charset.defaultCharset()), messageProperties);
+    @Override
+    public Object[] getArguments() {
+      Message message = getMessage();
+      return new Object[] {null, message};
     }
 
-    private class TestMethodInvocation implements MethodInvocation {
-
-        @Override
-        public Method getMethod() {
-            return null;
-        }
-
-        @Override
-        public Object[] getArguments() {
-            Message message = getMessage();
-            return new Object[] {null, message};
-        }
-
-        @Override
-        public Object proceed() {
-            return null;
-        }
-
-        @Override
-        public Object getThis() {
-            return null;
-        }
-
-        @Override
-        public AccessibleObject getStaticPart() {
-            return null;
-        }
+    @Override
+    public Object proceed() {
+      throw new RuntimeException();
     }
 
-    private class TestMethodInvocationWithContext implements MethodInvocation {
-
-        @Override
-        public Method getMethod() {
-            return null;
-        }
-
-        @Override
-        public Object[] getArguments() {
-            Message message = getMessageWithContext();
-            return new Object[] {null, message};
-        }
-
-        @Override
-        public Object proceed() {
-            return null;
-        }
-
-        @Override
-        public Object getThis() {
-            return null;
-        }
-
-        @Override
-        public AccessibleObject getStaticPart() {
-            return null;
-        }
+    @Override
+    public Object getThis() {
+      return null;
     }
 
-    private class TestExceptionMethodInvocation implements MethodInvocation {
+    @Override
+    public AccessibleObject getStaticPart() {
+      return null;
+    }
+  }
 
-        @Override
-        public Method getMethod() {
-            return null;
-        }
+  private class TestExceptionMethodInvocationWithContext implements MethodInvocation {
 
-        @Override
-        public Object[] getArguments() {
-            Message message = getMessage();
-            return new Object[] {null, message};
-        }
-
-        @Override
-        public Object proceed() {
-            throw new RuntimeException();
-        }
-
-        @Override
-        public Object getThis() {
-            return null;
-        }
-
-        @Override
-        public AccessibleObject getStaticPart() {
-            return null;
-        }
+    @Override
+    public Method getMethod() {
+      return null;
     }
 
-    private class TestExceptionMethodInvocationWithContext implements MethodInvocation {
-
-        @Override
-        public Method getMethod() {
-            return null;
-        }
-
-        @Override
-        public Object[] getArguments() {
-            Message message = getMessageWithContext();
-            return new Object[] {null, message};
-        }
-
-        @Override
-        public Object proceed() {
-            throw new RuntimeException();
-        }
-
-        @Override
-        public Object getThis() {
-            return null;
-        }
-
-        @Override
-        public AccessibleObject getStaticPart() {
-            return null;
-        }
+    @Override
+    public Object[] getArguments() {
+      Message message = getMessageWithContext();
+      return new Object[] {null, message};
     }
+
+    @Override
+    public Object proceed() {
+      throw new RuntimeException();
+    }
+
+    @Override
+    public Object getThis() {
+      return null;
+    }
+
+    @Override
+    public AccessibleObject getStaticPart() {
+      return null;
+    }
+  }
 }
