@@ -28,6 +28,7 @@ Class | Method | Instrumented
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(Object message, MessagePostProcessor messagePostProcessor)` | &#10004;
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String routingKey, Object message, MessagePostProcessor messagePostProcessor)` | &#10004;
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String exchange, String routingKey, Object message, MessagePostProcessor messagePostProcessor)` |  &#10004;
+[AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `void convertAndSend(String exchange, String routingKey, Object message, @Nullable CorrelationData correlationData)` |  &#10004;
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(Message message)` | &#10004;
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(String routingKey, Message message)` | &#10004;
 [AmqpTemplate](https://docs.spring.io/spring-amqp/api/index.html?org/springframework/amqp/core/AmqpTemplate.html) | `Message sendAndReceive(String exchange, String routingKey, Message message)` | &#10004;

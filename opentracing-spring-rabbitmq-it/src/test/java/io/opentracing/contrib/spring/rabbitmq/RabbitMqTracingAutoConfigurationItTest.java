@@ -26,6 +26,7 @@ import java.util.List;
 import org.junit.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -149,6 +150,18 @@ public class RabbitMqTracingAutoConfigurationItTest extends BaseRabbitMqTracingI
 
     // when
     rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, MESSAGE, messagePostProcessor);
+
+    // then
+    assertConsumerAndProducerSpans(0, ROUTING_KEY);
+  }
+
+
+  @Test
+  public void convertAndSend_withExchangeRoutingKeyAndCorrelationData_shouldBeTraced() {
+    // given
+    CorrelationData correlationData = null;
+    // when
+    rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, MESSAGE, correlationData);
 
     // then
     assertConsumerAndProducerSpans(0, ROUTING_KEY);
