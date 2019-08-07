@@ -13,15 +13,25 @@
  */
 package io.opentracing.contrib.spring.rabbitmq;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+
+import io.opentracing.Span;
+import io.opentracing.mock.MockSpan;
 import io.opentracing.mock.MockTracer;
 
 import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicLong;
 import org.aopalliance.intercept.MethodInvocation;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Spy;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,12 +48,19 @@ public class RabbitMqReceiveTracingInterceptorTest {
 
   @Autowired
   private MockTracer mockTracer;
-  @Autowired
+  @Spy
   private RabbitMqSpanDecorator spanDecorator;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     mockTracer.reset();
+    resetSpanIdCounter();
+  }
+
+  private void resetSpanIdCounter() throws NoSuchFieldException, IllegalAccessException {
+    Field spanIdCounter = MockSpan.class.getDeclaredField("nextId");
+    spanIdCounter.setAccessible(true);
+    ((AtomicLong) spanIdCounter.get(null)).set(0L);
   }
 
   @Test
@@ -57,6 +74,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
     interceptor.invoke(methodInvocation);
 
     // then
+    assertTraceAndSpanId("1", "3");
   }
 
   @Test
@@ -69,6 +87,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
     interceptor.invoke(methodInvocation);
 
     // then
+    assertTraceAndSpanId("1", "2");
   }
 
   @Test
@@ -81,6 +100,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
     interceptor.invoke(methodInvocation);
 
     // then
+    assertTraceAndSpanId("1", "2");
   }
 
   @Test(expected = RuntimeException.class)
@@ -105,6 +125,13 @@ public class RabbitMqReceiveTracingInterceptorTest {
     interceptor.invoke(methodInvocation);
 
     // then
+  }
+
+  private void assertTraceAndSpanId(String traceId, String spanId) {
+    ArgumentCaptor<Span> span = ArgumentCaptor.forClass(Span.class);
+    verify(spanDecorator).onReceive(any(MessageProperties.class), span.capture());
+    assertThat(span.getValue().context().toTraceId()).isEqualTo(traceId);
+    assertThat(span.getValue().context().toSpanId()).isEqualTo(spanId);
   }
 
   private Message getMessage() {
