@@ -17,6 +17,7 @@ import org.junit.Test;
 
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -138,6 +139,15 @@ public class RabbitMqTracingAutoConfigurationDisabledItTest extends BaseRabbitMq
 
     // when
     rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, MESSAGE, messagePostProcessor);
+
+    // then
+    checkNoSpans();
+  }
+
+  @Test
+  public void convertAndSend_withExchangeRoutingKeyAndCorrelationData_shouldNotBeTraced() {
+    // when
+    rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, MESSAGE, (CorrelationData) null);
 
     // then
     checkNoSpans();
