@@ -60,7 +60,7 @@
 
         <version.io.opentracing>0.32.0</version.io.opentracing>
         <version.org.awaitility>3.1.6</version.org.awaitility>
-        <version.org.springframework.boot>2.1.5.RELEASE</version.org.springframework.boot>
+        <version.org.springframework.boot>2.1.9.RELEASE</version.org.springframework.boot>
         <version.org.testcontainers>1.11.2</version.org.testcontainers>
         <lombok.version>1.16.18</lombok.version>
 
