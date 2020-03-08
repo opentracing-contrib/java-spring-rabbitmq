@@ -66,7 +66,7 @@ public class RabbitMqReceiveTracingInterceptorTest {
   @Test
   public void testInvoke_whenContextAndActiveSpan() throws Throwable {
     // given
-    mockTracer.buildSpan("parent").startActive(false);
+    mockTracer.buildSpan("parent").start();
     RabbitMqReceiveTracingInterceptor interceptor = new RabbitMqReceiveTracingInterceptor(mockTracer, spanDecorator);
     MethodInvocation methodInvocation = new TestMethodInvocationWithContext();
 

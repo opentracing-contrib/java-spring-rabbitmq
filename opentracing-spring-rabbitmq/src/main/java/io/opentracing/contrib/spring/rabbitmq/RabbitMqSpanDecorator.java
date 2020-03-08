@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2019 The OpenTracing Authors
+ * Copyright 2017-2020 The OpenTracing Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -26,14 +26,14 @@ import org.springframework.amqp.core.MessageProperties;
 public class RabbitMqSpanDecorator {
 
   public void onSend(MessageProperties messageProperties, String exchange, String routingKey, Span span) {
-    Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
+    Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ.getKey());
     RabbitMqTracingTags.EXCHANGE.set(span, exchange);
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
     RabbitMqTracingTags.ROUTING_KEY.set(span, routingKey);
   }
 
   public void onReceive(MessageProperties messageProperties, Span span) {
-    Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ);
+    Tags.COMPONENT.set(span, RabbitMqTracingTags.RABBITMQ.getKey());
     RabbitMqTracingTags.EXCHANGE.set(span, messageProperties.getReceivedExchange());
     RabbitMqTracingTags.MESSAGE_ID.set(span, messageProperties.getMessageId());
     RabbitMqTracingTags.ROUTING_KEY.set(span, messageProperties.getReceivedRoutingKey());

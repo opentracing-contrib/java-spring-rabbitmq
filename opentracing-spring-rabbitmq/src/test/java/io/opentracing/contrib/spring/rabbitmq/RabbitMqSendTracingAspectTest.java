@@ -73,7 +73,7 @@ public class RabbitMqSendTracingAspectTest {
 
     Span span = mockTracer.buildSpan("test").start();
 
-    mockTracer.scopeManager().activate(span, false);
+    mockTracer.scopeManager().activate(span);
 
     TestMessage<String> myMessage = new TestMessage<>("");
 
