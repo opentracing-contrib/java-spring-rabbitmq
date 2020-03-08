@@ -21,6 +21,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
+
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.amqp.core.MessageProperties;
