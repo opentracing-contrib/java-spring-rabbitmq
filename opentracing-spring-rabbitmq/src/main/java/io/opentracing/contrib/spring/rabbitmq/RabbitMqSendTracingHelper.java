@@ -14,10 +14,12 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Scope;
+import io.opentracing.ScopeManager;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import java.lang.reflect.Field;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.Address;
@@ -76,6 +78,8 @@ public class RabbitMqSendTracingHelper {
       spanDecorator.onError(ex, tracer.scopeManager().activeSpan());
       throw ex;
     } finally {
+      Optional.ofNullable(tracer.scopeManager().activeSpan())
+          .ifPresent(Span::finish);
       scope.close();
     }
   }

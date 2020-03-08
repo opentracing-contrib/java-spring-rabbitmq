@@ -14,6 +14,7 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 
 import java.util.Optional;
@@ -50,7 +51,11 @@ class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvic
       child.ifPresent(scope -> spanDecorator.onError(ex, tracer.scopeManager().activeSpan()));
       throw ex;
     } finally {
-      child.ifPresent(Scope::close);
+      child.ifPresent(it -> {
+        Optional.ofNullable(tracer.scopeManager().activeSpan())
+            .ifPresent(Span::finish);
+        it.close();
+      });
     }
   }
 }
