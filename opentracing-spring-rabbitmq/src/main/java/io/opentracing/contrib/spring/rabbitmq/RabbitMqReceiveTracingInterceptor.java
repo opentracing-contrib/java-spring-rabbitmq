@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2019 The OpenTracing Authors
+ * Copyright 2017-2020 The OpenTracing Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,6 +14,7 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Scope;
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 
 import java.util.Optional;
@@ -40,17 +41,21 @@ class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvic
     MessageProperties messageProperties = message.getMessageProperties();
 
     Optional<Scope> child = RabbitMqTracingUtils.buildReceiveSpan(messageProperties, tracer);
-    child.ifPresent(scope -> spanDecorator.onReceive(messageProperties, scope.span()));
+    child.ifPresent(scope -> spanDecorator.onReceive(messageProperties, tracer.scopeManager().activeSpan()));
 
     // CHECKSTYLE:OFF
     try {
       return methodInvocation.proceed();
     } catch (Exception ex) {
       // CHECKSTYLE:ON
-      child.ifPresent(scope -> spanDecorator.onError(ex, scope.span()));
+      child.ifPresent(scope -> spanDecorator.onError(ex, tracer.scopeManager().activeSpan()));
       throw ex;
     } finally {
-      child.ifPresent(Scope::close);
+      child.ifPresent(it -> {
+        Optional.ofNullable(tracer.scopeManager().activeSpan())
+            .ifPresent(Span::finish);
+        it.close();
+      });
     }
   }
 }

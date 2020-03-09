@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2019 The OpenTracing Authors
+ * Copyright 2017-2020 The OpenTracing Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -42,7 +42,7 @@ final class RabbitMqTracingUtils {
             .withTag(Tags.SPAN_KIND.getKey(), RabbitMqTracingTags.SPAN_KIND_CONSUMER);
 
     context.ifPresent(spanContext -> spanBuilder.addReference(References.FOLLOWS_FROM, spanContext));
-    Scope scope = spanBuilder.startActive(true);
+    Scope scope = tracer.scopeManager().activate(spanBuilder.start());
 
     return Optional.of(scope);
   }
@@ -56,8 +56,7 @@ final class RabbitMqTracingUtils {
 
     ScopeManager scopeManager = tracer.scopeManager();
     Optional<SpanContext> existingSpanContext = Optional.ofNullable(scopeManager)
-        .map(ScopeManager::active)
-        .map(Scope::span)
+        .map(ScopeManager::activeSpan)
         .map(Span::context);
 
     existingSpanContext.ifPresent(spanBuilder::asChildOf);
@@ -66,8 +65,8 @@ final class RabbitMqTracingUtils {
       Optional<SpanContext> messageParentContext = findParent(messageProperties, tracer);
       messageParentContext.ifPresent(spanBuilder::asChildOf);
     }
-
-    return spanBuilder.startActive(true);
+    Span span = spanBuilder.start();
+    return scopeManager.activate(span);
   }
 
   private static Optional<SpanContext> findParent(

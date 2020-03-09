@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2019 The OpenTracing Authors
+ * Copyright 2017-2020 The OpenTracing Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,10 +14,12 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Scope;
+import io.opentracing.ScopeManager;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import java.lang.reflect.Field;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.Address;
@@ -66,16 +68,18 @@ public class RabbitMqSendTracingHelper {
       T resp = proceedCallback.apply(messageWithTracingHeaders);
 
       if (resp == null && nullResponseMeansError) {
-        Span span = scope.span();
+        Span span = tracer.scopeManager().activeSpan();
         spanDecorator.onError(null, span);
         long replyTimeout = (long) ReflectionUtils.getField(FIELD_REPLY_TIMEOUT, rabbitTemplate);
         span.log("Timeout: AMQP request message handler hasn't sent reply AMQP message in " + replyTimeout + "ms");
       }
       return resp;
     } catch (AmqpException ex) {
-      spanDecorator.onError(ex, scope.span());
+      spanDecorator.onError(ex, tracer.scopeManager().activeSpan());
       throw ex;
     } finally {
+      Optional.ofNullable(tracer.scopeManager().activeSpan())
+          .ifPresent(Span::finish);
       scope.close();
     }
   }
@@ -90,12 +94,12 @@ public class RabbitMqSendTracingHelper {
     // so that new spans created on the AMQP message consumer side could be associated with span of current trace
     scope = RabbitMqTracingUtils.buildSendSpan(tracer, messageProperties);
     tracer.inject(
-        scope.span().context(),
+        tracer.scopeManager().activeSpan().context(),
         Format.Builtin.TEXT_MAP,
         new RabbitMqInjectAdapter(messageProperties));
 
     // Add AMQP related tags to tracing span
-    spanDecorator.onSend(messageProperties, exchange, routingKey, scope.span());
+    spanDecorator.onSend(messageProperties, exchange, routingKey, tracer.scopeManager().activeSpan());
 
     return convertedMessage;
   }
