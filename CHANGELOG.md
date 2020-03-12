@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.0.0](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/10) - 2020-03-12
+- [Upgrade to Open Tracing 0.33](https://github.com/opentracing-contrib/java-spring-rabbitmq/issues/32): [@DotSpy](https://github.com/DotSpy)
+
 ## [2.0.2](https://github.com/opentracing-contrib/java-spring-rabbitmq/milestone/7) - 2019-06-03
 - [Instrument rabbitTemplate send method](https://github.com/opentracing-contrib/java-spring-rabbitmq/pull/37): [@ask4gilles](https://github.com/ask4gilles)
 
