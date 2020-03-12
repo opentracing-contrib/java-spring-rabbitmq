@@ -13,6 +13,7 @@ Version | OpenTracing API | Spring Boot version
 1.x.x | 0.31.0 | 2.1.x
 1.0.2 | 0.32.0 | 2.1.x
 2.0.x | 0.32.0 | 2.1.x
+3.0.x | 0.33.0 | 2.1.x
 
 ## Sent messages
 The following methods are instrumented:
