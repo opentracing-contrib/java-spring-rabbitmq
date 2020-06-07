@@ -53,12 +53,8 @@ public class RabbitMqTracingAutoConfiguration {
    */
   @ConditionalOnBean(RabbitTemplate.class)
   @Bean
-  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitTemplate rabbitTemplate,
-                                                             RabbitMqSpanDecorator spanDecorator) {
-    Assert.notNull(rabbitTemplate.getMessageConverter(), "RabbitTemplate has no message converter configured");
-
-    return new RabbitMqSendTracingAspect(tracer, rabbitTemplate.getExchange(), rabbitTemplate.getRoutingKey(),
-        rabbitTemplate.getMessageConverter(), spanDecorator);
+  public RabbitMqSendTracingAspect rabbitMqSendTracingAspect(RabbitMqSpanDecorator spanDecorator) {
+    return new RabbitMqSendTracingAspect(tracer, spanDecorator);
   }
 
   @Bean
