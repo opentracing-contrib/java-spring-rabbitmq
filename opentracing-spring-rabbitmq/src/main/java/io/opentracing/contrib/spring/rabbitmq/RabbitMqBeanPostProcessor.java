@@ -30,7 +30,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Gilles Robert
  * @author Sud Ramasamy
  */
-class RabbitMqBeanPostProcessor implements BeanPostProcessor {
+public class RabbitMqBeanPostProcessor implements BeanPostProcessor {
 
   private final RabbitMqReceiveTracingInterceptor rabbitMqReceiveTracingInterceptor;
 
