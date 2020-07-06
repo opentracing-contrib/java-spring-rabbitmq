@@ -30,7 +30,7 @@ import org.springframework.aop.BeforeAdvice;
  * @author Gilles Robert
  */
 @AllArgsConstructor
-class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvice, BeforeAdvice {
+public class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, AfterAdvice, BeforeAdvice {
 
   private final Tracer tracer;
   private final RabbitMqSpanDecorator spanDecorator;

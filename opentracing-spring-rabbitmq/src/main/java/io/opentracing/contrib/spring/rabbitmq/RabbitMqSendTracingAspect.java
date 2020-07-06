@@ -29,7 +29,7 @@ import org.springframework.amqp.support.converter.MessageConverter;
  */
 @Aspect
 @AllArgsConstructor
-class RabbitMqSendTracingAspect {
+public class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
   private final String exchange;
