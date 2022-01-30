@@ -1,3 +1,4 @@
+![maintenance-status](https://img.shields.io/badge/maintenance-deprecated-red.svg)
 [![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
 [![Build Status][ci-img]][ci] [![Released Version][maven-img]][maven]
 
