@@ -15,6 +15,7 @@ package io.opentracing.contrib.spring.rabbitmq;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.opentracing.Span;
@@ -26,9 +27,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -52,12 +56,13 @@ public class RabbitMqSendTracingAspectTest {
   private ProceedingJoinPoint proceedingJoinPoint;
   @Mock
   private MessageConverter messageConverter;
+  @Mock
+  private RabbitTemplate rabbitTemplate;
 
   @Before
   public void init() {
     MockitoAnnotations.initMocks(this);
-    aspect = new RabbitMqSendTracingAspect(mockTracer, "overridden-exchange", ROUTING_KEY,
-        messageConverter, spanDecorator);
+    aspect = new RabbitMqSendTracingAspect(mockTracer, spanDecorator);
   }
 
   @After
@@ -88,11 +93,17 @@ public class RabbitMqSendTracingAspectTest {
     given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
+    given(proceedingJoinPoint.getTarget()).willReturn(rabbitTemplate);
+
+    given(rabbitTemplate.getMessageConverter()).willReturn(messageConverter);
+
     // when
     aspect.traceRabbitSend(proceedingJoinPoint, exchange, routingKey, myMessage);
 
     // then
     verify(proceedingJoinPoint).getArgs();
+    verify(rabbitTemplate).getMessageConverter();
+    verify(proceedingJoinPoint, times(2)).getTarget();
     verify(messageConverter).toMessage(any(Object.class), any(MessageProperties.class));
     verify(proceedingJoinPoint).proceed(args);
   }
@@ -107,6 +118,8 @@ public class RabbitMqSendTracingAspectTest {
     Object[] args = new Object[] {exchange, ROUTING_KEY, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
+    given(proceedingJoinPoint.getTarget()).willReturn(rabbitTemplate);
+
     given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
@@ -114,6 +127,8 @@ public class RabbitMqSendTracingAspectTest {
     aspect.traceRabbitSend(proceedingJoinPoint, exchange, ROUTING_KEY, message);
 
     // then
+    verify(rabbitTemplate).getMessageConverter();
+    verify(proceedingJoinPoint, times(2)).getTarget();
     verify(proceedingJoinPoint).getArgs();
     verify(proceedingJoinPoint).proceed(args);
   }
@@ -128,6 +143,8 @@ public class RabbitMqSendTracingAspectTest {
     Object[] args = new Object[] {exchange, ROUTING_KEY, message};
     given(proceedingJoinPoint.getArgs()).willReturn(args);
 
+    given(proceedingJoinPoint.getTarget()).willReturn(rabbitTemplate);
+
     given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
         .willReturn(message);
 
@@ -138,11 +155,39 @@ public class RabbitMqSendTracingAspectTest {
       aspect.traceRabbitSend(proceedingJoinPoint, exchange, ROUTING_KEY, message);
     } catch (RuntimeException e) {
       // then
+      verify(rabbitTemplate).getMessageConverter();
       verify(proceedingJoinPoint).getArgs();
+      verify(proceedingJoinPoint, times(2)).getTarget();
       verify(proceedingJoinPoint).proceed(args);
 
       throw e;
     }
+  }
+
+  @Test
+  public void testTraceRabbitSend_whenTargetIsNotRabbitTemplate() throws Throwable {
+    // given
+    String exchange = "opentracing.event.exchange";
+
+    MessageProperties properties = new MessageProperties();
+    Message message = new Message("".getBytes(), properties);
+    Object[] args = new Object[] {exchange, ROUTING_KEY, message};
+    AmqpTemplate notRabbitTemplate = Mockito.mock(AmqpTemplate.class);
+    given(proceedingJoinPoint.getArgs()).willReturn(args);
+
+    given(proceedingJoinPoint.getTarget()).willReturn(rabbitTemplate);
+
+    given(messageConverter.toMessage(any(Object.class), any(MessageProperties.class)))
+        .willReturn(message);
+
+    given(proceedingJoinPoint.getTarget()).willReturn(notRabbitTemplate);
+
+    // when
+    aspect.traceRabbitSend(proceedingJoinPoint, exchange, ROUTING_KEY, message);
+    // then
+    verify(proceedingJoinPoint).getArgs();
+    verify(proceedingJoinPoint).getTarget();
+    verify(proceedingJoinPoint).proceed(args);
   }
 
   class TestMessage<T> {

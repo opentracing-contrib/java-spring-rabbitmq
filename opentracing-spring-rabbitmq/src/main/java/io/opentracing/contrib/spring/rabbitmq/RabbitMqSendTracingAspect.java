@@ -14,6 +14,7 @@
 package io.opentracing.contrib.spring.rabbitmq;
 
 import io.opentracing.Tracer;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -32,9 +33,6 @@ import org.springframework.amqp.support.converter.MessageConverter;
 public class RabbitMqSendTracingAspect {
 
   private final Tracer tracer;
-  private final String exchange;
-  private final String routingKey;
-  private final MessageConverter messageConverter;
   private final RabbitMqSpanDecorator spanDecorator;
 
   /**
@@ -43,9 +41,7 @@ public class RabbitMqSendTracingAspect {
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.send(..)) && args(message)",
       argNames = "pjp,message")
   public Object traceRabbitSend(ProceedingJoinPoint pjp, Object message) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, this.routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, false);
   }
 
   /**
@@ -54,9 +50,7 @@ public class RabbitMqSendTracingAspect {
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.send(..)) && args(routingKey, message)",
       argNames = "pjp,routingKey,message")
   public Object traceRabbitSend(ProceedingJoinPoint pjp, String routingKey, Object message) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, false);
   }
 
   /**
@@ -66,9 +60,7 @@ public class RabbitMqSendTracingAspect {
                   "routingKey, message)", argNames = "pjp,exchange, routingKey, message")
   public Object traceRabbitSend(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, false);
   }
 
   /**
@@ -77,9 +69,7 @@ public class RabbitMqSendTracingAspect {
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.convertAndSend(..)) " +
                   "&& args(message)", argNames = "pjp,message")
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, Object message) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, this.routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, false);
   }
 
   /**
@@ -90,9 +80,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertAndSend(
       ProceedingJoinPoint pjp, String routingKey, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, false);
   }
 
   /**
@@ -103,9 +91,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertAndSend(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, false);
   }
 
   /**
@@ -115,9 +101,7 @@ public class RabbitMqSendTracingAspect {
                   " && args(message, messagePostProcessor)", argNames = "pjp,message,messagePostProcessor")
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, Object message,
                                           MessagePostProcessor messagePostProcessor) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, this.routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, false);
   }
 
   /**
@@ -128,9 +112,7 @@ public class RabbitMqSendTracingAspect {
       argNames = "pjp,routingKey,message,messagePostProcessor")
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, String routingKey, Object message,
                                           MessagePostProcessor messagePostProcessor) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, false);
   }
 
   /**
@@ -141,9 +123,7 @@ public class RabbitMqSendTracingAspect {
       argNames = "pjp,exchange,routingKey,message,messagePostProcessor")
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp,String exchange, String routingKey, Object message,
                                           MessagePostProcessor messagePostProcessor) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, false);
   }
 
   /**
@@ -155,9 +135,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, String routingKey, Object message,
                                           MessagePostProcessor messagePostProcessor, CorrelationData correlationData)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, false);
   }
 
   /**
@@ -169,9 +147,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertAndSend(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message,
                                           CorrelationData correlationData)
           throws Throwable {
-    return createTracingHelper()
-            .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-                    proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, false);
   }
 
   /**
@@ -180,9 +156,7 @@ public class RabbitMqSendTracingAspect {
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.sendAndReceive(..))" +
                   " && args(message)", argNames = "pjp,message")
   public Object traceRabbitSendAndReceive(ProceedingJoinPoint pjp, Object message) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(this.exchange, this.routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, true);
   }
 
   /**
@@ -191,9 +165,7 @@ public class RabbitMqSendTracingAspect {
   @Around(value = "execution(* org.springframework.amqp.core.AmqpTemplate.sendAndReceive(..))" +
                   " && args(routingKey, message)", argNames = "pjp,routingKey,message")
   public Object traceRabbitSendAndReceive(ProceedingJoinPoint pjp, String routingKey, Object message) throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, true);
   }
 
   /**
@@ -203,9 +175,7 @@ public class RabbitMqSendTracingAspect {
                   " && args(exchange, routingKey, message)", argNames = "pjp,exchange,routingKey,message")
   public Object traceRabbitSendAndReceive(ProceedingJoinPoint pjp, String exchange, String routingKey, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, true);
   }
 
   // Intercept public methods that eventually delegate to RabbitTemplate.doSendAndReceive
@@ -218,10 +188,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitSendAndReceive(
       ProceedingJoinPoint pjp, String exchange, String routingKey, Message message, CorrelationData correlationData)
       throws Throwable {
-    return createTracingHelper()
-        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, true);
   }
 
   /**
@@ -231,9 +198,7 @@ public class RabbitMqSendTracingAspect {
                   " && args(message)", argNames = "pjp,message")
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, true);
   }
 
   /**
@@ -243,9 +208,7 @@ public class RabbitMqSendTracingAspect {
                   " && args(routingKey, message)", argNames = "pjp,routingKey,message")
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, String routingKey, Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, true);
   }
 
   /**
@@ -256,9 +219,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, String exchange, String routingKey,
                                                  Object message)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, true);
   }
 
   /**
@@ -269,9 +230,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, Object message,
                                                  MessagePostProcessor messagePostProcessor)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 0));
+    return tagAndProceed(pjp, null, null, message, 0, true);
   }
 
   /**
@@ -283,9 +242,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, String routingKey, Object message,
                                                  MessagePostProcessor messagePostProcessor)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 1));
+    return tagAndProceed(pjp, null, routingKey, message, 1, true);
   }
 
   /**
@@ -297,9 +254,7 @@ public class RabbitMqSendTracingAspect {
   public Object traceRabbitConvertSendAndReceive(ProceedingJoinPoint pjp, String exchange, String routingKey,
                                                  Object message, MessagePostProcessor messagePostProcessor)
       throws Throwable {
-    return createTracingHelper()
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, true);
   }
 
   /**
@@ -312,14 +267,27 @@ public class RabbitMqSendTracingAspect {
       ProceedingJoinPoint pjp, String exchange, String routingKey, Object message,
       MessagePostProcessor messagePostProcessor, CorrelationData correlationData)
       throws Throwable {
-    return createTracingHelper()
-        .nullResponseMeansTimeout((RabbitTemplate) pjp.getTarget())
-        .doWithTracingHeadersMessage(exchange, routingKey, message, (convertedMessage) ->
-            proceedReplacingMessage(pjp, convertedMessage, 2));
+    return tagAndProceed(pjp, exchange, routingKey, message, 2, true);
   }
 
-  private RabbitMqSendTracingHelper createTracingHelper() {
-    return new RabbitMqSendTracingHelper(tracer, messageConverter, spanDecorator);
+  private Object tagAndProceed(ProceedingJoinPoint pjp, String exchange, String routingKey,
+                               Object message, int messageIndex, boolean nullResponseMeansTimeout)
+      throws Throwable {
+    if (pjp.getTarget() instanceof RabbitTemplate) {
+      RabbitTemplate rabbitTemplate = (RabbitTemplate) pjp.getTarget();
+      MessageConverter converter = rabbitTemplate.getMessageConverter();
+      String exactlyRoutingKey = Optional.ofNullable(routingKey).orElseGet(rabbitTemplate::getRoutingKey);
+      String exactlyExchange = Optional.ofNullable(exchange).orElseGet(rabbitTemplate::getExchange);
+
+      RabbitMqSendTracingHelper helper = new RabbitMqSendTracingHelper(tracer, converter, spanDecorator);
+      if (nullResponseMeansTimeout) {
+        helper.nullResponseMeansTimeout(rabbitTemplate);
+      }
+      return helper
+          .doWithTracingHeadersMessage(exactlyExchange, exactlyRoutingKey, message,
+              (convertedMessage) -> proceedReplacingMessage(pjp, convertedMessage, messageIndex));
+    }
+    return pjp.proceed(pjp.getArgs());
   }
 
   private Object proceedReplacingMessage(ProceedingJoinPoint pjp, Message convertedMessage, int messageArgumentIndex)
