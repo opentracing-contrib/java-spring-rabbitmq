@@ -37,7 +37,7 @@ public class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, Aft
 
   @Override
   public Object invoke(MethodInvocation methodInvocation) throws Throwable {
-    Message message = (Message) methodInvocation.getArguments()[1];
+    Message message = (Message) methodInvocation.getArguments()[0];
     MessageProperties messageProperties = message.getMessageProperties();
 
     Optional<Scope> child = RabbitMqTracingUtils.buildReceiveSpan(messageProperties, tracer);
