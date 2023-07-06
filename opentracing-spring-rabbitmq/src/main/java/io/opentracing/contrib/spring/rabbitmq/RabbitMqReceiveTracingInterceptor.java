@@ -26,6 +26,7 @@ import org.springframework.amqp.core.MessageProperties;
 import org.springframework.aop.AfterAdvice;
 import org.springframework.aop.BeforeAdvice;
 
+import java.util.List;
 /**
  * @author Gilles Robert
  */
@@ -35,9 +36,22 @@ public class RabbitMqReceiveTracingInterceptor implements MethodInterceptor, Aft
   private final Tracer tracer;
   private final RabbitMqSpanDecorator spanDecorator;
 
+
+  /**
+   * OpenTracing original class doesnt handle batch messaging
+   * code is from https://github.com/openzipkin/brave/blob/master/instrumentation/spring-rabbit/src/main/java/brave/spring/rabbit/TracingRabbitListenerAdvice.java
+   */
+
   @Override
   public Object invoke(MethodInvocation methodInvocation) throws Throwable {
-    Message message = (Message) methodInvocation.getArguments()[0];
+
+    Message message = null;
+    if (methodInvocation.getArguments()[1] instanceof List) {
+      message = ((List<? extends Message>) methodInvocation.getArguments()[1]).get(0);
+    } else {
+      message = (Message) methodInvocation.getArguments()[1];
+    }
+
     MessageProperties messageProperties = message.getMessageProperties();
 
     Optional<Scope> child = RabbitMqTracingUtils.buildReceiveSpan(messageProperties, tracer);
